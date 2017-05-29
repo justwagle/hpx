@@ -829,6 +829,14 @@ namespace hpx { namespace threads
                   static_cast<std::size_t>(paths.instanceindex_), _1),
               "worker-thread", shepherd_count
             },
+            //threads{locality#%d/total}/time/experimental-bg-work
+            //threads{locality#%d/worker-thread}/time/experimental-bg-work
+            { "time/experimental-bg-work",
+              util::bind(&ti::get_background_work_duration, this, -1, _1),
+              util::bind(&ti::get_background_work_duration, this,
+                         static_cast<std::size_t>(paths.instanceindex_), _1),
+              "worker-thread", shepherd_count
+            },
             // /threads{locality#%d/total}/count/instantaneous/all
             // /threads{locality#%d/worker-thread%d}/count/instantaneous/all
             { "count/instantaneous/all",
@@ -1108,6 +1116,12 @@ namespace hpx { namespace threads
               &performance_counters::locality_thread_counter_discoverer,
               "ns"
             },
+            { "/threads/time/experimental-bg-work", performance_counters::counter_raw,
+              "returns the overall time spent running background work",
+              HPX_PERFORMANCE_COUNTER_V1, counts_creator,
+              &performance_counters::locality_thread_counter_discoverer,
+              "0.1%"
+            },
             { "/threads/count/instantaneous/all", performance_counters::counter_raw,
               "returns the overall current number of HPX-threads instantiated at the "
               "referenced locality", HPX_PERFORMANCE_COUNTER_V1, counts_creator,
@@ -1357,6 +1371,13 @@ namespace hpx { namespace threads
         get_cumulative_duration(std::size_t num, bool reset)
     {
         return pool_.get_cumulative_duration(num, reset);
+    }
+
+    template <typename SchedulingPolicy>
+    std::int64_t threadmanager_impl<SchedulingPolicy>::
+        get_background_work_duration(size_t num, bool reset)
+    {
+        return pool_.get_background_work_duration(num, reset);
     }
 
 #ifdef HPX_HAVE_THREAD_IDLE_RATES

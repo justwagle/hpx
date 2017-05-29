@@ -245,6 +245,9 @@ namespace hpx { namespace threads
         std::int64_t get_cumulative_duration(
             std::size_t num = std::size_t(-1), bool reset = false);
 
+        std::int64_t get_background_work_duration(
+            std::size_t num = std::size_t(-1), bool reset = false);
+
     protected:
         ///
         template <typename C>

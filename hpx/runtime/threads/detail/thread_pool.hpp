@@ -99,6 +99,7 @@ namespace hpx { namespace threads { namespace detail
 #endif
 
         std::int64_t get_cumulative_duration(std::size_t num, bool reset);
+        std::int64_t get_background_work_duration(std::size_t num, bool reset);
 
 #if defined(HPX_HAVE_THREAD_IDLE_RATES)
         ///////////////////////////////////////////////////////////////////////
@@ -164,7 +165,7 @@ namespace hpx { namespace threads { namespace detail
         {
             return sched_;
         }
- 
+
     protected:
         friend struct init_tss_helper<Scheduler>;
 
@@ -237,6 +238,8 @@ namespace hpx { namespace threads { namespace detail
         // tfunc_impl timers
         std::vector<std::uint64_t> exec_times_, tfunc_times_;
         std::vector<std::uint64_t> reset_tfunc_times_;
+
+        std::vector<std::uint64_t> background_duration_, reset_background_duration_;
 
         std::vector<std::int64_t> idle_loop_counts_, busy_loop_counts_;
 

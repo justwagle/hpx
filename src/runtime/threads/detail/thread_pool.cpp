@@ -322,6 +322,9 @@ namespace hpx { namespace threads { namespace detail
 
         tasks_active_.resize(num_threads);
 
+        background_duration_.resize(num_threads);
+        reset_background_duration_.resize(num_threads);
+
         // scale timestamps to nanoseconds
         std::uint64_t base_timestamp = util::hardware::timestamp();
         std::uint64_t base_time = util::high_resolution_clock::now();
@@ -628,7 +631,7 @@ namespace hpx { namespace threads { namespace detail
                         executed_thread_phases_[num_thread],
                         tfunc_times_[num_thread], exec_times_[num_thread],
                         idle_loop_counts_[num_thread], busy_loop_counts_[num_thread],
-                        tasks_active_[num_thread]);
+                        tasks_active_[num_thread], background_duration_[num_thread]);
 
                     detail::scheduling_callbacks callbacks(
                         util::bind( //-V107
@@ -1189,6 +1192,63 @@ namespace hpx { namespace threads { namespace detail
 
         return std::uint64_t(double(tfunc_total) * timestamp_scale_);
     }
+
+////////////////////////////////////////////////////////////
+template <typename Scheduler>
+std::int64_t thread_pool<Scheduler>::
+get_background_work_duration(std::size_t num, bool reset)
+{
+    std::uint64_t bg_total = 0ul;
+    std::uint64_t reset_bg_total = 0ul;
+    std::uint64_t tfunc_total = 0ul;
+    std::uint64_t reset_tfunc_total = 0ul;
+
+
+    if (num != std::size_t(-1))
+    {
+        tfunc_total = tfunc_times_[num];
+        reset_tfunc_total = reset_tfunc_times_[num];
+
+        bg_total =  background_duration_[num];
+        reset_bg_total = reset_background_duration_[num];
+
+        if (reset)
+            reset_background_duration_[num] = bg_total;
+        reset_tfunc_times_[num] = tfunc_total;
+    }
+    else
+    {
+        tfunc_total = std::accumulate(tfunc_times_.begin(),
+                                      tfunc_times_.end(), std::uint64_t(0));
+        reset_tfunc_total = std::accumulate(
+            reset_tfunc_times_.begin(), reset_tfunc_times_.end(),
+            std::uint64_t(0));
+
+        bg_total = std::accumulate(background_duration_.begin(),
+                                   background_duration_.end(), std::uint64_t(0));
+        reset_bg_total = std::accumulate(
+            reset_background_duration_.begin(), reset_background_duration_.end(),
+            std::uint64_t(0));
+
+        if (reset)
+        {
+            std::copy(tfunc_times_.begin(), tfunc_times_.end(),
+                      reset_tfunc_times_.begin());
+
+            std::copy(background_duration_.begin(), background_duration_.end(),
+                      reset_background_duration_.begin());
+        }
+    }
+
+    HPX_ASSERT(bg_total >= reset_bg_total);
+    HPX_ASSERT(tfunc_total >= reset_tfunc_total);
+
+    tfunc_total -= reset_tfunc_total;
+    bg_total -= reset_bg_total;
+    //this is now a 0.1 %
+    return std::uint64_t((double(bg_total)/tfunc_total)*1000);
+}
+//////////////////////////////////////////////////////////////////////
 
 #if defined(HPX_HAVE_THREAD_IDLE_RATES)
     ///////////////////////////////////////////////////////////////////////////
