@@ -1212,9 +1212,12 @@ get_background_work_duration(std::size_t num, bool reset)
         bg_total =  background_duration_[num];
         reset_bg_total = reset_background_duration_[num];
 
+        //this resets tfunc for others as well, need to fix this
         if (reset)
+        {
             reset_background_duration_[num] = bg_total;
-        reset_tfunc_times_[num] = tfunc_total;
+            reset_tfunc_times_[num] = tfunc_total;
+        }
     }
     else
     {
