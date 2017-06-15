@@ -35,7 +35,6 @@
 #include <boost/range/const_iterator.hpp>
 #include <boost/range/functions.hpp>
 #include <boost/range/irange.hpp>
-#include <boost/throw_exception.hpp>
 
 #if defined(HPX_HAVE_LIBFUN_STD_EXPERIMENTAL_OPTIONAL)
 #include <experimental/optional>
@@ -123,8 +122,8 @@ namespace hpx { namespace parallel { inline namespace v3
                 )
             {
                 try {
-                    typedef typename hpx::util::detail::deferred_result_of<
-                            F(Ts&&...)
+                    typedef typename hpx::util::detail::invoke_deferred_result<
+                            F, Ts...
                         >::type result_type;
 
                     // older versions of gcc are not able to capture parameter
@@ -160,12 +159,10 @@ namespace hpx { namespace parallel { inline namespace v3
                     return std::move(*out);
                 }
                 catch (std::bad_alloc const& ba) {
-                    boost::throw_exception(ba);
+                    throw ba;
                 }
                 catch (...) {
-                    boost::throw_exception(
-                        exception_list(boost::current_exception())
-                    );
+                    throw exception_list(std::current_exception());
                 }
             }
 
@@ -186,8 +183,8 @@ namespace hpx { namespace parallel { inline namespace v3
                 )
             {
                 typedef std::is_void<
-                        typename hpx::util::detail::deferred_result_of<
-                            F(Ts&&...)
+                        typename hpx::util::detail::invoke_deferred_result<
+                            F, Ts...
                         >::type
                     > is_void;
                 return call_impl(std::forward<Executor>(exec),
@@ -227,8 +224,8 @@ namespace hpx { namespace parallel { inline namespace v3
                     std::iterator_traits<iterator_type>::value_type
                 value_type;
             typedef typename
-                    hpx::util::detail::deferred_result_of<
-                        F(value_type, Ts...)
+                    hpx::util::detail::invoke_deferred_result<
+                        F, value_type, Ts...
                     >::type
                 type;
         };
@@ -365,12 +362,10 @@ namespace hpx { namespace parallel { inline namespace v3
                     return hpx::util::unwrapped(results);
                 }
                 catch (std::bad_alloc const& ba) {
-                    boost::throw_exception(ba);
+                    throw ba;
                 }
                 catch (...) {
-                    boost::throw_exception(
-                        exception_list(boost::current_exception())
-                    );
+                    throw exception_list(std::current_exception());
                 }
             }
 
@@ -632,7 +627,7 @@ namespace hpx { namespace parallel { inline namespace v3
     typename std::enable_if<
         hpx::traits::is_executor<Executor>::value,
         hpx::lcos::future<
-            typename hpx::util::detail::deferred_result_of<F(Ts...)>::type
+            typename hpx::util::detail::invoke_deferred_result<F, Ts...>::type
         >
     >::type
     async_execute(Executor && exec, F && f, Ts &&... ts)
@@ -648,7 +643,7 @@ namespace hpx { namespace parallel { inline namespace v3
     HPX_FORCEINLINE
     typename std::enable_if<
         hpx::traits::is_executor<Executor>::value,
-        typename hpx::util::detail::deferred_result_of<F(Ts...)>::type
+        typename hpx::util::detail::invoke_deferred_result<F, Ts...>::type
     >::type
     sync_execute(Executor && exec, F && f, Ts &&... ts)
     {

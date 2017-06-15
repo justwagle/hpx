@@ -114,9 +114,13 @@ endif()
 
 # Adjust a couple of build-system settings, if HPX is to be built using vcpkg
 if(MSVC)
+  set(_with_vcpkg_default OFF)
+  if(VCPKG_TOOLCHAIN)
+    set(_with_vcpkg_default ON)
+  endif()
   hpx_option(HPX_WITH_VCPKG BOOL
     "Build HPX in the context of the vcpkg build and configuration tool (default: OFF)."
-    OFF ADVANCED)
+    ${_with_vcpkg_default} ADVANCED)
   if(HPX_WITH_VCPKG)
     hpx_add_config_define(HPX_HAVE_VCPKG)
   endif()
@@ -380,9 +384,8 @@ hpx_option(HPX_WITH_DISABLED_SIGNAL_EXCEPTION_HANDLERS BOOL
   "Disables the mechanism that produces debug output for caught signals and unhandled exceptions (default: OFF)"
   OFF
   ADVANCED)
-
 if(HPX_WITH_DISABLED_SIGNAL_EXCEPTION_HANDLERS)
-  add_definitions(-DHPX_WITH_DISABLED_SIGNAL_EXCEPTION_HANDLERS)
+  hpx_add_config_define(HPX_HAVE_DISABLED_SIGNAL_EXCEPTION_HANDLERS)
 endif()
 
 ## Thread Manager related build options
@@ -543,7 +546,6 @@ hpx_option(HPX_WITH_GOOGLE_PERFTOOLS BOOL
 if(HPX_WITH_GOOGLE_PERFTOOLS)
   hpx_add_config_define(HPX_HAVE_GOOGLE_PERFTOOLS)
 endif()
-
 
 hpx_option(HPX_WITH_ITTNOTIFY BOOL
   "Enable Amplifier (ITT) instrumentation support." OFF CATEGORY "Profiling")
@@ -847,6 +849,14 @@ if(HPX_WITH_ASYNC_FUNCTION_COMPATIBILITY)
   hpx_add_config_define(HPX_HAVE_ASYNC_FUNCTION_COMPATIBILITY)
 endif()
 
+# HPX_WITH_QUEUE_COMPATIBILITY: introduced in V1.1.0
+hpx_option(HPX_WITH_QUEUE_COMPATIBILITY BOOL
+    "Enable old style queue components in API (default: OFF)"
+    OFF ADVANCED)
+if(HPX_WITH_QUEUE_COMPATIBILITY)
+  hpx_add_config_define(HPX_HAVE_QUEUE_COMPATIBILITY)
+endif()
+
 # BADBAD: This enables an overload of swap which is necessary to work around the
 #         problems caused by zip_iterator not being a real random access iterator.
 #         Dereferencing zip_iterator does not yield a true reference but
@@ -984,54 +994,10 @@ hpx_add_target_compile_definition(HPX_DISABLE_ASSERTS
 hpx_add_target_compile_definition(BOOST_DISABLE_ASSERTS
   CONFIGURATIONS Release RelWithDebInfo MinSizeRelease)
 
-# Make sure we compile in C++11 mode (MSVC uses it automatically)
+# Make sure we compile in proper C++xx mode (MSVC uses it automatically)
 if(NOT MSVC)
-  if(HPX_WITH_CUDA AND NOT HPX_WITH_CUDA_CLANG)
-    set(CXX_FLAG -std=c++11)
-  else()
-
-    # Try -std=c++14 first
-    if(HPX_WITH_CXX14 OR NOT (("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
-                              AND (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 17)))
-      check_cxx_compiler_flag(-std=c++14 HPX_WITH_CXX14)
-    endif()
-
-    if(HPX_WITH_CXX14)
-      set(CXX_FLAG -std=c++14)
-      # The Intel compiler doesn't appear to have a fully functional
-      # implementation of C++14 constexpr. It's fine with our C++14 constexpr
-      # usage in HPX but chokes on Boost.
-      # FIXME: This should be replaced with a version-based check in the future
-      # when the Intel compiler is able to build Boost with -std=c++14.
-      if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
-        add_definitions(-DBOOST_NO_CXX14_CONSTEXPR)
-      endif()
-    else()
-      # ... otherwise try -std=c++1y
-
-      if(HPX_WITH_CXX1Y OR NOT (("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
-                                AND (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 17)))
-        check_cxx_compiler_flag(-std=c++1y HPX_WITH_CXX1y)
-      endif()
-
-      if(HPX_WITH_CXX1Y)
-        set(CXX_FLAG -std=c++1y)
-      else()
-        # ... otherwise try -std=c++11
-        check_cxx_compiler_flag(-std=c++11 HPX_WITH_CXX11)
-        if(HPX_WITH_CXX11)
-          set(CXX_FLAG -std=c++11)
-        else()
-          # ... otherwise try -std=c++0x
-          check_cxx_compiler_flag(-std=c++0x HPX_WITH_CXX0X)
-          if(HPX_WITH_CXX0X)
-            set(CXX_FLAG -std=c++0x)
-          endif()
-        endif()
-      endif()
-    endif()
-  endif()
-  hpx_add_target_compile_option(${CXX_FLAG})
+  include(HPX_DetectCppDialect)
+  hpx_detect_cpp_dialect()
 endif()
 
 ################################################################################

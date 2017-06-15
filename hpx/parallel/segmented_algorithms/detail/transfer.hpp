@@ -16,9 +16,8 @@
 #include <hpx/parallel/util/detail/algorithm_result.hpp>
 #include <hpx/parallel/util/detail/handle_remote_exceptions.hpp>
 
-#include <boost/exception_ptr.hpp>
-
 #include <algorithm>
+#include <exception>
 #include <iterator>
 #include <list>
 #include <type_traits>
@@ -244,7 +243,7 @@ namespace hpx { namespace parallel { inline namespace v1
                         ->  std::pair<SegIter, SegOutIter>
                     {
                         // handle any remote exceptions, will throw on error
-                        std::list<boost::exception_ptr> errors;
+                        std::list<std::exception_ptr> errors;
                         parallel::util::detail::handle_remote_exceptions<
                             ExPolicy
                         >::call(r, errors);
@@ -274,7 +273,7 @@ namespace hpx { namespace parallel { inline namespace v1
                     >::get(std::make_pair(last, dest));
             }
 
-            typedef parallel::execution::is_sequential_execution_policy<
+            typedef parallel::execution::is_sequenced_execution_policy<
                     ExPolicy
                 > is_seq;
             return segmented_transfer(Algo(),
