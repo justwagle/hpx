@@ -147,6 +147,21 @@ if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
 #    set(DEFAULT_MALLOC "jemalloc")
 endif()
 
+if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
+  set(HPX_WITH_THREAD_STACKOVERFLOW_DETECTION_DEFAULT OFF)
+  string(TOUPPER ${CMAKE_BUILD_TYPE} CMAKE_BUILD_TYPE_UC)
+  if("${CMAKE_BUILD_TYPE_UC}" STREQUAL "DEBUG")
+    set(HPX_WITH_THREAD_STACKOVERFLOW_DETECTION_DEFAULT ON)
+  endif()
+  hpx_option(HPX_WITH_THREAD_STACKOVERFLOW_DETECTION
+    BOOL
+    "Enable stackoverflow detection for HPX threads/coroutines. (default: OFF, debug: ON)"
+    ${HPX_WITH_THREAD_STACKOVERFLOW_DETECTION_DEFAULT} ADVANCED)
+  if(HPX_WITH_THREAD_STACKOVERFLOW_DETECTION)
+    hpx_add_config_define(HPX_HAVE_THREAD_STACKOVERFLOW_DETECTION)
+  endif()
+endif()
+
 hpx_option(HPX_WITH_MALLOC
   STRING
   "Define which allocator should be linked in. Options are: system, tcmalloc, jemalloc, tbbmalloc, and custom (default is: tcmalloc)"
@@ -923,6 +938,14 @@ hpx_option(HPX_WITH_INCLUSIVE_SCAN_COMPATIBILITY BOOL
     ON ADVANCED)
 if(HPX_WITH_INCLUSIVE_SCAN_COMPATIBILITY)
   hpx_add_config_define(HPX_HAVE_INCLUSIVE_SCAN_COMPATIBILITY)
+endif()
+
+# HPX_WITH_ALGORITHM_INPUT_ITERATOR_SUPPORT: introduced in V1.1.0
+hpx_option(HPX_WITH_ALGORITHM_INPUT_ITERATOR_SUPPORT BOOL
+    "Enable weaker (non-conforming) iterator requirements for parallel algorithms (default: OFF)"
+    OFF ADVANCED)
+if(HPX_WITH_ALGORITHM_INPUT_ITERATOR_SUPPORT)
+  hpx_add_config_define(HPX_HAVE_ALGORITHM_INPUT_ITERATOR_SUPPORT)
 endif()
 
 ################################################################################

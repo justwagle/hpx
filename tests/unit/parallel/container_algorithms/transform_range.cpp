@@ -1,4 +1,4 @@
-//  Copyright (c) 2014-2015 Hartmut Kaiser
+//  Copyright (c) 2014-2017 Hartmut Kaiser
 //
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
 //  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -7,6 +7,7 @@
 #include <hpx/hpx.hpp>
 #include <hpx/parallel/container_algorithms/transform.hpp>
 #include <hpx/util/lightweight_test.hpp>
+#include <hpx/util/iterator_range.hpp>
 
 #include <cstddef>
 #include <iostream>
@@ -120,7 +121,9 @@ void transform_test()
 {
     test_transform<std::random_access_iterator_tag>();
     test_transform<std::forward_iterator_tag>();
+#if defined(HPX_HAVE_ALGORITHM_INPUT_ITERATOR_SUPPORT)
     test_transform<std::input_iterator_tag>();
+#endif
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -141,7 +144,7 @@ void test_transform_exception(ExPolicy policy, IteratorTag)
     bool caught_exception = false;
     try {
         hpx::parallel::transform(policy,
-            boost::make_iterator_range(
+            hpx::util::make_iterator_range(
                 iterator(std::begin(c)), iterator(std::end(c))
             ),
             std::begin(d),
@@ -177,7 +180,7 @@ void test_transform_exception_async(ExPolicy p, IteratorTag)
     try {
         auto f =
             hpx::parallel::transform(p,
-                boost::make_iterator_range(
+                hpx::util::make_iterator_range(
                     iterator(std::begin(c)), iterator(std::end(c))
                 ),
                 std::begin(d),
@@ -232,7 +235,9 @@ void transform_exception_test()
 {
     test_transform_exception<std::random_access_iterator_tag>();
     test_transform_exception<std::forward_iterator_tag>();
+#if defined(HPX_HAVE_ALGORITHM_INPUT_ITERATOR_SUPPORT)
     test_transform_exception<std::input_iterator_tag>();
+#endif
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -253,7 +258,7 @@ void test_transform_bad_alloc(ExPolicy policy, IteratorTag)
     bool caught_bad_alloc = false;
     try {
         hpx::parallel::transform(policy,
-            boost::make_iterator_range(
+            hpx::util::make_iterator_range(
                 iterator(std::begin(c)), iterator(std::end(c))
             ),
             std::begin(d),
@@ -288,7 +293,7 @@ void test_transform_bad_alloc_async(ExPolicy p, IteratorTag)
     try {
         auto f =
             hpx::parallel::transform(p,
-                boost::make_iterator_range(
+                hpx::util::make_iterator_range(
                     iterator(std::begin(c)), iterator(std::end(c))
                 ),
                 std::begin(d),
@@ -342,7 +347,9 @@ void transform_bad_alloc_test()
 {
     test_transform_bad_alloc<std::random_access_iterator_tag>();
     test_transform_bad_alloc<std::forward_iterator_tag>();
+#if defined(HPX_HAVE_ALGORITHM_INPUT_ITERATOR_SUPPORT)
     test_transform_bad_alloc<std::input_iterator_tag>();
+#endif
 }
 
 ///////////////////////////////////////////////////////////////////////////////
