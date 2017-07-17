@@ -240,6 +240,7 @@ namespace hpx { namespace threads { namespace detail
         std::vector<std::uint64_t> reset_tfunc_times_;
 
         std::vector<std::uint64_t> background_duration_, reset_background_duration_;
+        std::vector<std::uint64_t> reset_background_tfunc_times_;
 
         std::vector<std::int64_t> idle_loop_counts_, busy_loop_counts_;
 

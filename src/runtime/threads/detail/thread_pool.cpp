@@ -324,6 +324,7 @@ namespace hpx { namespace threads { namespace detail
 
         background_duration_.resize(num_threads);
         reset_background_duration_.resize(num_threads);
+        reset_background_tfunc_times_.resize(num_threads);
 
         // scale timestamps to nanoseconds
         std::uint64_t base_timestamp = util::hardware::timestamp();
@@ -1207,16 +1208,15 @@ get_background_work_duration(std::size_t num, bool reset)
     if (num != std::size_t(-1))
     {
         tfunc_total = tfunc_times_[num];
-        reset_tfunc_total = reset_tfunc_times_[num];
+        reset_tfunc_total = reset_background_tfunc_times_[num];
 
         bg_total =  background_duration_[num];
         reset_bg_total = reset_background_duration_[num];
 
-        //this resets tfunc for others as well, need to fix this
         if (reset)
         {
             reset_background_duration_[num] = bg_total;
-            reset_tfunc_times_[num] = tfunc_total;
+            reset_background_tfunc_times_[num] = tfunc_total;
         }
     }
     else
@@ -1224,7 +1224,7 @@ get_background_work_duration(std::size_t num, bool reset)
         tfunc_total = std::accumulate(tfunc_times_.begin(),
                                       tfunc_times_.end(), std::uint64_t(0));
         reset_tfunc_total = std::accumulate(
-            reset_tfunc_times_.begin(), reset_tfunc_times_.end(),
+            reset_background_tfunc_times_.begin(), reset_background_tfunc_times_.end(),
             std::uint64_t(0));
 
         bg_total = std::accumulate(background_duration_.begin(),
@@ -1236,7 +1236,7 @@ get_background_work_duration(std::size_t num, bool reset)
         if (reset)
         {
             std::copy(tfunc_times_.begin(), tfunc_times_.end(),
-                      reset_tfunc_times_.begin());
+                      reset_background_tfunc_times_.begin());
 
             std::copy(background_duration_.begin(), background_duration_.end(),
                       reset_background_duration_.begin());
