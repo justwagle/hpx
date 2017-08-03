@@ -1197,7 +1197,7 @@ namespace hpx { namespace threads { namespace detail
 ////////////////////////////////////////////////////////////
 template <typename Scheduler>
 std::int64_t thread_pool<Scheduler>::
-get_background_work_duration(std::size_t num, bool reset)
+get_background_overhead(std::size_t num, bool reset)
 {
     std::uint64_t bg_total = 0ul;
     std::uint64_t reset_bg_total = 0ul;
@@ -1210,12 +1210,12 @@ get_background_work_duration(std::size_t num, bool reset)
         tfunc_total = tfunc_times_[num];
         reset_tfunc_total = reset_background_tfunc_times_[num];
 
-        bg_total =  background_duration_[num];
-        reset_bg_total = reset_background_duration_[num];
+        bg_total =  background_overhead_[num];
+        reset_bg_total = reset_background_overhead_[num];
 
         if (reset)
         {
-            reset_background_duration_[num] = bg_total;
+            reset_background_overhead_[num] = bg_total;
             reset_background_tfunc_times_[num] = tfunc_total;
         }
     }
@@ -1227,10 +1227,10 @@ get_background_work_duration(std::size_t num, bool reset)
             reset_background_tfunc_times_.begin(), reset_background_tfunc_times_.end(),
             std::uint64_t(0));
 
-        bg_total = std::accumulate(background_duration_.begin(),
-                                   background_duration_.end(), std::uint64_t(0));
+        bg_total = std::accumulate(background_overhead_.begin(),
+                                   background_overhead_.end(), std::uint64_t(0));
         reset_bg_total = std::accumulate(
-            reset_background_duration_.begin(), reset_background_duration_.end(),
+            reset_background_overhead_.begin(), reset_background_overhead_.end(),
             std::uint64_t(0));
 
         if (reset)
@@ -1238,20 +1238,62 @@ get_background_work_duration(std::size_t num, bool reset)
             std::copy(tfunc_times_.begin(), tfunc_times_.end(),
                       reset_background_tfunc_times_.begin());
 
-            std::copy(background_duration_.begin(), background_duration_.end(),
-                      reset_background_duration_.begin());
+            std::copy(background_overhead_.begin(), background_overhead_.end(),
+                      reset_background_overhead_.begin());
         }
     }
 
     HPX_ASSERT(bg_total >= reset_bg_total);
     HPX_ASSERT(tfunc_total >= reset_tfunc_total);
 
+    if (tfunc_total == 0)   // avoid division by zero
+        return 1000LL;
+
     tfunc_total -= reset_tfunc_total;
     bg_total -= reset_bg_total;
     //this is now a 0.1 %
     return std::uint64_t((double(bg_total)/tfunc_total)*1000);
 }
+
+template <typename Scheduler>
+std::int64_t thread_pool<Scheduler>::
+get_background_work_duration(std::size_t num, bool reset)   {
+    std::uint64_t bg_total = 0ul;
+    std::uint64_t reset_bg_total = 0ul;
+
+    if (num != std::size_t(-1))
+    {
+        bg_total =  background_duration_[num];
+        reset_bg_total = reset_background_duration_[num];
+
+        if (reset)
+        {
+            reset_background_duration_[num] = bg_total;
+        }
+    }
+    else
+    {
+        bg_total = std::accumulate(background_duration_.begin(),
+                                   background_duration_.end(), std::uint64_t(0));
+        reset_bg_total = std::accumulate(
+                reset_background_duration_.begin(), reset_background_duration_.end(),
+                std::uint64_t(0));
+
+        if (reset)
+        {
+            std::copy(background_duration_.begin(), background_duration_.end(),
+                      reset_background_duration_.begin());
+        }
+    }
+
+    HPX_ASSERT(bg_total >= reset_bg_total);
+    bg_total -= reset_bg_total;
+    return std::uint64_t(double(bg_total) * timestamp_scale_);
+}
+
 //////////////////////////////////////////////////////////////////////
+
+
 
 #if defined(HPX_HAVE_THREAD_IDLE_RATES)
     ///////////////////////////////////////////////////////////////////////////

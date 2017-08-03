@@ -100,6 +100,7 @@ namespace hpx { namespace threads { namespace detail
 
         std::int64_t get_cumulative_duration(std::size_t num, bool reset);
         std::int64_t get_background_work_duration(std::size_t num, bool reset);
+        std::int64_t get_background_overhead(std::size_t num, bool reset);
 
 #if defined(HPX_HAVE_THREAD_IDLE_RATES)
         ///////////////////////////////////////////////////////////////////////
@@ -241,6 +242,7 @@ namespace hpx { namespace threads { namespace detail
 
         std::vector<std::uint64_t> background_duration_, reset_background_duration_;
         std::vector<std::uint64_t> reset_background_tfunc_times_;
+        std::vector<std::uint64_t> background_overhead_, reset_background_overhead_;
 
         std::vector<std::int64_t> idle_loop_counts_, busy_loop_counts_;
 
