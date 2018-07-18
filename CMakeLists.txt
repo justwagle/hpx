@@ -1553,7 +1553,7 @@ if(HPX_WITH_APEX)
   include(GitExternal)
   git_external(apex
     https://github.com/khuck/xpress-apex.git
-    v2.0.1
+    develop
     ${_hpx_apex_no_update}
     VERBOSE)
 
