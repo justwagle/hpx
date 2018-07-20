@@ -36,8 +36,6 @@ namespace hpx { namespace util
         }
     }
 
-    apex_parcel_coalescing_policy* apex_parcel_coalescing_policy::instance = nullptr;
-
 #endif
 }}
 
