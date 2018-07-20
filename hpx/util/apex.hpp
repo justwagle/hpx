@@ -39,7 +39,7 @@ namespace hpx { namespace util
         std::string counter_name;
         std::string name;
 
-        static apex_parcel_coalescing_policy* instance;
+        HPX_API_EXPORT static apex_parcel_coalescing_policy* instance;
         static std::mutex params_mutex;
 
         std::mutex count_mutex;
