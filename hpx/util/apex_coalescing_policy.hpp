@@ -114,7 +114,7 @@ namespace hpx { namespace util
             ss << "/threads{locality#" << hpx::get_locality_id();
             ss << "/total}/time/average-overhead";
             counter_name = std::string(ss.str());
-            apex::sample_runtime_counter(1000, counter_name);
+            apex::sample_runtime_counter(500000, counter_name);
             std::function<double(void)> metric = [=]() -> double {
                 apex_profile* profile = apex::get_profile(counter_name);
                 if (profile == nullptr || profile->calls == 0)
@@ -127,7 +127,7 @@ namespace hpx { namespace util
             request = new apex_tuning_request(name);
             request->set_metric(metric);
             request->set_strategy(apex_ah_tuning_strategy::EXHAUSTIVE);
-            request->add_param_long("parcel_count", 2, 2, 100, 2);
+            request->add_param_long("parcel_count", 2, 2, 256, 2);
             request->add_param_long("buffer_time", 1000, 1000, 5000, 1000);
             request->set_trigger(apex::register_custom_event(name));
             apex::setup_custom_tuning(*request);
