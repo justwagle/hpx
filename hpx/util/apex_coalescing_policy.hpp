@@ -58,7 +58,7 @@ namespace hpx { namespace util
                 parcel_count);
             apex::sample_value(
                 "hpx.plugins.coalescing_message_handler.interval", buffer_time);
-
+            std::cout<<"now setting coalescing values\n";
             hpx::set_config_entry(
                 "hpx.plugins.coalescing_message_handler.num_messages",
                 parcel_count);
@@ -95,16 +95,16 @@ namespace hpx { namespace util
             }
         }
 
-        static apex_event_type apex_parcel_coalescing_event(
-            apex_event_type in_type = APEX_INVALID_EVENT)
-        {
-            static apex_event_type event_type;
-            if (in_type != APEX_INVALID_EVENT)
-            {
-                event_type = in_type;
-            }
-            return event_type;
-        }
+        // static apex_event_type apex_parcel_coalescing_event(
+        //     apex_event_type in_type = APEX_INVALID_EVENT)
+        // {
+        //     static apex_event_type event_type;
+        //     if (in_type != APEX_INVALID_EVENT)
+        //     {
+        //         event_type = in_type;
+        //     }
+        //     return event_type;
+        // }
 
         apex_parcel_coalescing_policy()
           : tuning_window(1)
@@ -137,6 +137,7 @@ namespace hpx { namespace util
             {
                 std::cerr << "Error registering policy!" << std::endl;
             }
+            std::cout<<" Done registering policy.\n";
         }
 
         static void initialize()

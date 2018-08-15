@@ -22,10 +22,10 @@ namespace hpx { namespace util
         //static std::uint32_t num_localities = find_all_localities().size();
         apex_task_wrapper parent_wrapper = nullptr;
         // Parent pointers aren't reliable in distributed runs.
-        if (parent_task != nullptr &&
-            parent_locality_id == hpx::get_locality_id()) {
-            parent_wrapper = parent_task.get()->get_apex_data();
-        }
+        // if (parent_task != nullptr &&
+        //     parent_locality_id == hpx::get_locality_id()) {
+        //     parent_wrapper = parent_task.get()->get_apex_data();
+        // }
         if (description.kind() ==
                 thread_description::data_type_description) {
             return apex::new_task(description.get_description(),
