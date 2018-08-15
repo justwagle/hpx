@@ -272,6 +272,9 @@ hpx_option(HPX_WITH_RUNTIME BOOL "Build HPX runtime (default: ON)" ON ADVANCED C
 hpx_option(HPX_WITH_COMPILE_ONLY_TESTS BOOL
   "Create build system support for compile time only HPX tests (default ON)"
   ON CATEGORY "Build Targets")
+hpx_option(HPX_WITH_FAIL_COMPILE_TESTS BOOL
+  "Create build system support for fail compile HPX tests (default ON)"
+  ON CATEGORY "Build Targets")
 
 # Enable IO-counters on linux systems only
 set(HPX_WITH_IO_COUNTERS_DEFAULT OFF)
@@ -495,7 +498,7 @@ if(HPX_WITH_THREAD_BACKTRACE_ON_SUSPENSION)
     OFF
     CATEGORY "Thread Manager" ADVANCED)
   if(HPX_WITH_THREAD_FULLBACKTRACE_ON_SUSPENSION)
-    hpx_add_config_define(HPX_HAVE_THREAD_FULLBAKCTRACE_ON_SUSPENSION)
+    hpx_add_config_define(HPX_HAVE_THREAD_FULLBACKTRACE_ON_SUSPENSION)
   endif()
 endif()
 
@@ -878,6 +881,15 @@ if(HPX_WITH_NETWORKING)
     "Enable the parcel coalescing plugin (default: ON)." ON ADVANCED)
   if(HPX_WITH_PARCEL_COALESCING)
     hpx_add_config_define(HPX_HAVE_PARCEL_COALESCING)
+    # Adaptive parcel coalescing related metrics counters are enabled only if both
+    # parcel coalescing plugin and thread idle rate counters are enabled.
+      if(HPX_WITH_THREAD_IDLE_RATES)
+        hpx_option(HPX_WITH_BACKGROUND_THREAD_COUNTERS BOOL
+           "Enable performance counters related to adaptive parcel coalescing (default: OFF)." OFF ADVANCED)
+        if(HPX_WITH_BACKGROUND_THREAD_COUNTERS)
+          hpx_add_config_define(HPX_HAVE_BACKGROUND_THREAD_COUNTERS)
+        endif()
+       endif()
   endif()
 endif()
 
@@ -1614,7 +1626,7 @@ if(HPX_WITH_HPXMP)
     ${_hpxmp_no_update}
     VERBOSE)
 
-  add_subdirectory(hpxmp/src)
+  add_subdirectory(hpxmp)
 
   # make sure thread-local storage is supported
   hpx_add_config_define(HPX_HAVE_THREAD_LOCAL_STORAGE)

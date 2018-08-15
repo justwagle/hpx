@@ -13,15 +13,16 @@
 // We support different implementation depending upon the Operating
 // System in use.
 #if (HPX_HAVE_DYNAMIC_HPX_MAIN != 0) && \
-    (defined(__linux) || defined(__linux__) || defined(linux))
+    (defined(__linux) || defined(__linux__) || defined(linux) || \
+    defined(__APPLE__))
 
 namespace hpx_start
 {
     // include_libhpx_wrap here is an override for the one present in
     // src/hpx_wrap.cpp. The value of this variable defines if we need
     // to change the program's entry point or not.
-    extern bool include_libhpx_wrap;
-    bool include_libhpx_wrap = true;
+    HPX_SYMBOL_EXPORT extern bool include_libhpx_wrap;
+    HPX_SYMBOL_EXPORT bool include_libhpx_wrap = true;
 }
 
 #else
