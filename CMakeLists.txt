@@ -443,6 +443,13 @@ hpx_option(HPX_WITH_MAX_CPU_COUNT STRING
   CATEGORY "Thread Manager" ADVANCED)
 hpx_add_config_define(HPX_HAVE_MAX_CPU_COUNT ${HPX_WITH_MAX_CPU_COUNT})
 
+set(HPX_MAX_NUMA_DOMAIN_COUNT_DEFAULT "4")
+hpx_option(HPX_WITH_MAX_NUMA_DOMAIN_COUNT STRING
+  "HPX applications will not run on machines with more NUMA domains (default: ${HPX_MAX_NUMA_DOMAIN_COUNT_DEFAULT})"
+  ${HPX_MAX_NUMA_DOMAIN_COUNT_DEFAULT}
+  CATEGORY "Thread Manager" ADVANCED)
+hpx_add_config_define(HPX_HAVE_MAX_NUMA_DOMAIN_COUNT ${HPX_WITH_MAX_NUMA_DOMAIN_COUNT})
+
 set(HPX_MORE_THAN_64_THREADS_DEFAULT OFF)
 if(HPX_WITH_MAX_CPU_COUNT GREATER 64)
   set(HPX_MORE_THAN_64_THREADS_DEFAULT ON)
@@ -595,6 +602,8 @@ if(HPX_WITH_APEX)
   hpx_add_config_define(HPX_HAVE_APEX)   # tell HPX that we use APEX
   hpx_option(HPX_WITH_APEX_NO_UPDATE BOOL
     "Do not update code from remote APEX repository." OFF CATEGORY "Profiling")
+  hpx_option(HPX_WITH_APEX_TAG STRING
+    "APEX repository tag or branch" "v2.0.1" CATEGORY "Profiling")
 endif()
 hpx_option(HPX_WITH_PAPI BOOL
   "Enable the PAPI based performance counter." OFF CATEGORY "Profiling")
@@ -628,7 +637,7 @@ endif()
 # Scheduler configuration
 ################################################################################
 hpx_option(HPX_WITH_THREAD_SCHEDULERS STRING
-  "Which thread schedulers are built. Options are: all, abp-priority, local, static-priority, static. For multiple enabled schedulers, separate with a semicolon (default: all)"
+  "Which thread schedulers are built. Options are: all, abp-priority, local, static-priority, static, shared-priority. For multiple enabled schedulers, separate with a semicolon (default: all)"
   "all"
   CATEGORY "Thread Manager" ADVANCED)
 
@@ -653,6 +662,10 @@ foreach(_scheduler ${HPX_WITH_THREAD_SCHEDULERS_UC})
   if(_scheduler STREQUAL "STATIC" OR _all)
     hpx_add_config_define(HPX_HAVE_STATIC_SCHEDULER)
     set(HPX_WITH_STATIC_SCHEDULER ON CACHE INTERNAL "")
+  endif()
+  if(_scheduler STREQUAL "SHARED-PRIORITY" OR _all)
+    hpx_add_config_define(HPX_HAVE_SHARED_PRIORITY_SCHEDULER)
+    set(HPX_WITH_SHARED_PRIORITY_SCHEDULER ON CACHE INTERNAL "")
   endif()
   unset(_all)
 endforeach()
@@ -1319,6 +1332,7 @@ if(WIN32)
   hpx_add_config_cond_define(_CRT_NONSTDC_NO_WARNINGS)
   hpx_add_config_cond_define(_WINSOCK_DEPRECATED_NO_WARNINGS)
   hpx_add_config_cond_define(_CRT_NON_CONFORMING_SWPRINTFS)
+  hpx_add_config_cond_define(_SILENCE_FPOS_SEEKPOS_DEPRECATION_WARNING)
 
   ##############################################################################
   # Boost
@@ -1557,6 +1571,11 @@ if(HPX_WITH_APEX)
   if(HPX_WITH_APEX_NO_UPDATE)
     set(_hpx_apex_no_update NO_UPDATE)
   endif()
+  set(_hpx_apex_tag "v2.0.1")
+  if(HPX_WITH_APEX_TAG)
+    message("Overriding APEX git tag ${_hpx_apex_tag} with ${HPX_WITH_APEX_TAG}")
+    set(_hpx_apex_tag ${HPX_WITH_APEX_TAG})
+  endif()
 
   # We want to track parent dependencies
   hpx_add_config_define(HPX_HAVE_THREAD_PARENT_REFERENCE)
@@ -1564,7 +1583,7 @@ if(HPX_WITH_APEX)
   include(GitExternal)
   git_external(apex
     https://github.com/khuck/xpress-apex.git
-    develop   # this should be set to a known good tag when HPX is released!
+    ${_hpx_apex_tag}
     ${_hpx_apex_no_update}
     VERBOSE)
 
