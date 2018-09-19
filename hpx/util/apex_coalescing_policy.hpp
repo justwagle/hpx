@@ -83,6 +83,7 @@ namespace hpx { namespace util
                 {
                     instance->send_count=0;
                     apex_profile* profile = apex::get_profile(instance->counter_name);
+                    //BUG: profile is always a nullptr, need to look into why that is //happening
                     if (profile != nullptr && profile->calls >= instance->tuning_window)
                     {
                         apex::custom_event(instance->request->get_trigger(), NULL);
@@ -142,8 +143,10 @@ namespace hpx { namespace util
 
         static void initialize()
         {
+            std::cout<<"initialize got called\n";
             if (instance == nullptr)
             {
+                std::cout<<"new instance created\n";
                 instance = new apex_parcel_coalescing_policy();
             }
         }
