@@ -112,3 +112,4 @@ int main(int argc, char* argv[])
     cfg.push_back("hpx.run_hpx_main!=1");
     return hpx::init(cmdline,argc, argv, cfg);
 }
+
