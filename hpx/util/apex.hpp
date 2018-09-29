@@ -50,6 +50,11 @@ namespace hpx { namespace util
         apex::finalize();
     }
 
+    inline void apex_stop_all_async_threads()
+    {
+        apex::stop_all_async_threads();
+    }
+
     HPX_EXPORT apex_task_wrapper apex_new_task(
                 thread_description const& description,
                 std::uint32_t parent_task_locality,

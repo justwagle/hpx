@@ -718,7 +718,7 @@ namespace hpx
         apply<components::server::runtime_support::shutdown_all_action>(
             hpx::find_root_locality(), shutdown_timeout);
 
-        //util::apex_finalize();
+        util::apex_stop_all_async_threads();
         return 0;
     }
 
@@ -756,7 +756,7 @@ namespace hpx
         if (std::abs(shutdown_timeout + 1.0) < 1e-16)
             shutdown_timeout = detail::get_option("hpx.shutdown_timeout", -1.0);
 
-        //util::apex_finalize();
+        util::apex_stop_all_async_threads();
 
         components::server::runtime_support* p =
             reinterpret_cast<components::server::runtime_support*>(
