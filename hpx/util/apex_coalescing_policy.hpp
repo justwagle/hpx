@@ -11,6 +11,7 @@
 #include <hpx/runtime/startup_function.hpp>
 #include <hpx/runtime/config_entry.hpp>
 #include <hpx/util/thread_description.hpp>
+#include <iostream>
 
 #ifdef HPX_HAVE_APEX
 #include "apex_api.hpp"
@@ -19,6 +20,7 @@
 #include <mutex>
 #include <cstdint>
 #include <string>
+#include <stdio.h>
 #endif
 
 namespace hpx { namespace util
@@ -27,6 +29,7 @@ namespace hpx { namespace util
     struct apex_parcel_coalescing_policy
     {
         apex_policy_handle* policy_handle;
+        apex_policy_handle* policy_handle_sample_counter;
         apex_tuning_request* request;
         int tuning_window;
         int send_count;
@@ -53,12 +56,13 @@ namespace hpx { namespace util
             const int parcel_count = parcel_count_param->get_value();
             const int buffer_time = buffer_time_param->get_value();
 
+
             apex::sample_value(
                 "hpx.plugins.coalescing_message_handler.num_messages",
                 parcel_count);
             apex::sample_value(
                 "hpx.plugins.coalescing_message_handler.interval", buffer_time);
-            std::cout<<"now setting coalescing values\n";
+            std::cout<<"now setting coalescing values Parcel Count: " << parcel_count << "  Buffer_time: " << buffer_time << "\n";
             hpx::set_config_entry(
                 "hpx.plugins.coalescing_message_handler.num_messages",
                 parcel_count);
@@ -68,7 +72,7 @@ namespace hpx { namespace util
 
         static int policy(const apex_context context)
         {
-            if (instance->send_count < 5000)
+            if (instance->send_count < 50000)
             {
                 if(instance->count_mutex.try_lock())
                 {
@@ -83,7 +87,11 @@ namespace hpx { namespace util
                 {
                     instance->send_count=0;
                     apex_profile* profile = apex::get_profile(instance->counter_name);
-                    //BUG: profile is always a nullptr, need to look into why that is //happening
+                    //apex_profile* profile = apex::get_profile();
+                    if (profile == nullptr) {
+                        printf("Nullpointer coutername, %s  send count %d\n ",instance->counter_name.c_str(), instance->send_count);
+                        fflush(stdout);
+                    }
                     if (profile != nullptr && profile->calls >= instance->tuning_window)
                     {
                         apex::custom_event(instance->request->get_trigger(), NULL);
@@ -113,9 +121,11 @@ namespace hpx { namespace util
         {
             std::stringstream ss;
             ss << "/threads{locality#" << hpx::get_locality_id();
+            //ss << "/total}/count/stack-recycles";
             ss << "/total}/time/average-overhead";
+            //ss << "/total}/time/experimental-bg-overhead";
             counter_name = std::string(ss.str());
-            apex::sample_runtime_counter(500000, counter_name);
+            policy_handle_sample_counter = apex::sample_runtime_counter(1000000, counter_name);
             std::function<double(void)> metric = [=]() -> double {
                 apex_profile* profile = apex::get_profile(counter_name);
                 if (profile == nullptr || profile->calls == 0)
@@ -123,12 +133,14 @@ namespace hpx { namespace util
                     return 0.0;
                 }
                 double result = profile->accumulated / profile->calls;
+                std::cout << "Counter Value: " << result << "\n";
                 return result;
             };
             request = new apex_tuning_request(name);
             request->set_metric(metric);
-            request->set_strategy(apex_ah_tuning_strategy::EXHAUSTIVE);
-            request->add_param_long("parcel_count", 2, 2, 256, 2);
+            //request->set_strategy(apex_ah_tuning_strategy::EXHAUSTIVE);
+            request->set_strategy(apex_ah_tuning_strategy::PARALLEL_RANK_ORDER);
+            request->add_param_long("parcel_count", 100, 2, 256, 2);
             request->add_param_long("buffer_time", 1000, 1000, 5000, 1000);
             request->set_trigger(apex::register_custom_event(name));
             apex::setup_custom_tuning(*request);
@@ -138,15 +150,13 @@ namespace hpx { namespace util
             {
                 std::cerr << "Error registering policy!" << std::endl;
             }
-            std::cout<<" Done registering policy.\n";
+            else std::cout<<" Done registering policy.\n";
         }
 
         static void initialize()
         {
-            std::cout<<"initialize got called\n";
             if (instance == nullptr)
             {
-                std::cout<<"new instance created\n";
                 instance = new apex_parcel_coalescing_policy();
             }
         }
