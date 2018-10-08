@@ -122,7 +122,7 @@ namespace hpx { namespace util
             std::stringstream ss;
             ss << "/threads{locality#" << hpx::get_locality_id();
             //ss << "/total}/count/stack-recycles";
-            ss << "/total}/time/average-overhead";
+            ss << "/total}/background-overhead";
             //ss << "/total}/time/experimental-bg-overhead";
             counter_name = std::string(ss.str());
             policy_handle_sample_counter = apex::sample_runtime_counter(1000000, counter_name);
