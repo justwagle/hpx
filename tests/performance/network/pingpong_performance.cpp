@@ -9,6 +9,7 @@
 #include <hpx/include/async.hpp>
 #include <hpx/include/serialization.hpp>
 #include <hpx/runtime/config_entry.hpp>
+#include <hpx/util/apex_coalescing_policy.hpp>
 
 #include <cstddef>
 #include <complex>
@@ -61,39 +62,46 @@ int hpx_main(boost::program_options::variables_map& vm)
     std::vector<hpx::naming::id_type> dummy = hpx::find_remote_localities();
     hpx::naming::id_type other_locality = dummy[0];
     hpx::evaluate_active_counters(true, "Finished Initialization");
+for(std::size_t j = 0; j < 1; j++) {
 
-    for(std::size_t i=0; i<n; ++i)
-    {
-        vec[i]=hpx::async(act,other_locality);
+    for (std::size_t i = 0; i < n; ++i) {
+        //calling the custom event
+        //apex::custom_event(hpx::util::apex_parcel_coalescing_policy::return_apex_parcel_coalescing_event(), NULL);
+            
+        vec[i] = hpx::async(act, other_locality);
     }
+
 
     hpx::wait_all(vec);
     hpx::evaluate_active_counters(false, "First Done");
-
-    for(std::size_t i=0; i<n; ++i)
-    {
-        vec2[i]=hpx::async(act,other_locality);
+    printf("first done \n");
+    fflush(stdout);
+    for (std::size_t i = 0; i < n; ++i) {
+        vec2[i] = hpx::async(act, other_locality);
     }
 
 
-    hpx::wait_all(vec2) ;
-    hpx::evaluate_active_counters(false," Second Done");
+    hpx::wait_all(vec2);
+    hpx::evaluate_active_counters(false, " Second Done");
 
-    for(std::size_t i=0; i<n; ++i)
-    {
-        recieved[i]=hpx::async(act,other_locality);
+    printf("Second done \n");
+    fflush(stdout);
+    for (std::size_t i = 0; i < n; ++i) {
+        recieved[i] = hpx::async(act, other_locality);
     }
 
-    hpx::wait_all(recieved) ;
-    hpx::evaluate_active_counters(false," Third Done");
+    hpx::wait_all(recieved);
+    hpx::evaluate_active_counters(false, " Third Done");
+    printf("Third done \n");
+    fflush(stdout);
 
-    for(std::size_t i=0; i<n; ++i)
-    {
-        recieved2[i]=hpx::async(act,other_locality);
+    for (std::size_t i = 0; i < n; ++i) {
+        recieved2[i] = hpx::async(act, other_locality);
     }
-    hpx::wait_all(recieved2) ;
+    hpx::wait_all(recieved2);
     hpx::evaluate_active_counters(true, "All Done");
-
+}
+    printf("All done \n"); fflush(stdout);
     return hpx::finalize();
 }
 

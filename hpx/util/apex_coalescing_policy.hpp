@@ -29,6 +29,9 @@ namespace hpx { namespace util
 
     struct apex_parcel_coalescing_policy
     {
+        //std::shared_ptr<apex_policy_handle> policy_handle;
+        //std::shared_ptr<apex_policy_handle> policy_handle_sample_counter;
+        //std::shared_ptr<apex_tuning_request> request;
         apex_policy_handle* policy_handle;
         apex_policy_handle* policy_handle_sample_counter;
         apex_tuning_request* request;
@@ -107,7 +110,7 @@ namespace hpx { namespace util
                 if(instance->policy_mutex.try_lock())
                 {
                     instance->send_count=0;
-                    instance->policy(context);
+                    instance->direct_policy(context);
                     instance->policy_mutex.unlock();
                 }
                 return APEX_NOERROR;
@@ -164,9 +167,11 @@ namespace hpx { namespace util
 
 	    // To register a custom event : uncomment the following two line
             custom_coalescing_event = apex_parcel_coalescing_event(apex::register_custom_event("APEX parcel coalescing event"));
-            policy_handle = apex::register_policy(custom_coalescing_event, count_based_policy);
+            policy_handle = apex::register_policy(custom_coalescing_event, direct_policy);
 
-	    // To call the custome event include this header file and use this following commented line
+
+	    // To call the custom event include this header file and use this following commented line
+	    // Do not uncomment the below line. It is just an example how to use it elsewhere
 	    //apex::custom_event(hpx::util::apex_parcel_coalescing_policy::return_apex_parcel_coalescing_event(), NULL);
 
             if (policy_handle == nullptr)
