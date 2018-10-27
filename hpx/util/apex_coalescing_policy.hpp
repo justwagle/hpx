@@ -26,7 +26,6 @@
 namespace hpx { namespace util
 {
 #if defined(HPX_HAVE_APEX) && defined(HPX_HAVE_PARCEL_COALESCING)
-    apex_event_type custom_coalescing_event;
 
     struct apex_parcel_coalescing_policy
     {
@@ -41,6 +40,7 @@ namespace hpx { namespace util
 
         HPX_API_EXPORT static apex_parcel_coalescing_policy* instance;
 
+        HPX_API_EXPORT static apex_event_type custom_coalescing_event;
 
         static std::mutex params_mutex;
 
@@ -74,7 +74,24 @@ namespace hpx { namespace util
                 "hpx.plugins.coalescing_message_handler.interval", buffer_time);
         }
 
-        static int policy(const apex_context context)
+        static int direct_policy(const apex_context context)
+        {
+	    apex_profile* profile = apex::get_profile(instance->counter_name);
+            //apex_profile* profile = apex::get_profile();
+            if (profile == nullptr) {
+                printf("Nullpointer coutername, %s  send count %d\n ",instance->counter_name.c_str(), instance->send_count);
+                fflush(stdout);
+            }
+            if (profile != nullptr && profile->calls >= instance->tuning_window)
+            {
+                apex::custom_event(instance->request->get_trigger(), NULL);
+                instance->set_coalescing_params();
+                apex::reset(instance->counter_name);
+            }
+            return APEX_NOERROR;
+        }
+
+        static int count_based_policy(const apex_context context)
         {
             if (instance->send_count < 50000)
             {
@@ -90,23 +107,13 @@ namespace hpx { namespace util
                 if(instance->policy_mutex.try_lock())
                 {
                     instance->send_count=0;
-                    apex_profile* profile = apex::get_profile(instance->counter_name);
-                    //apex_profile* profile = apex::get_profile();
-                    if (profile == nullptr) {
-                        printf("Nullpointer coutername, %s  send count %d\n ",instance->counter_name.c_str(), instance->send_count);
-                        fflush(stdout);
-                    }
-                    if (profile != nullptr && profile->calls >= instance->tuning_window)
-                    {
-                        apex::custom_event(instance->request->get_trigger(), NULL);
-                        instance->set_coalescing_params();
-                        apex::reset(instance->counter_name);
-                    }
+                    instance->policy(context);
                     instance->policy_mutex.unlock();
                 }
                 return APEX_NOERROR;
             }
         }
+
 
         static apex_event_type apex_parcel_coalescing_event(
             apex_event_type in_type = APEX_INVALID_EVENT)
@@ -149,13 +156,15 @@ namespace hpx { namespace util
             request->set_trigger(apex::register_custom_event(name));
             apex::setup_custom_tuning(*request);
 
-            //policy_handle = apex::register_policy(APEX_SEND, policy);
+	    // To register the policy using the send event: uncomment the following line
+            //policy_handle = apex::register_policy(APEX_SEND, count_based_policy);
 
-            /* register the tuning policy */
-            //policy_handle = apex::register_periodic_policy(500000, policy);
+	    // To register a periodic policy: uncomment the following line
+            //policy_handle = apex::register_periodic_policy(500000, direct_policy);
+
+	    // To register a custom event : uncomment the following two line
             custom_coalescing_event = apex_parcel_coalescing_event(apex::register_custom_event("APEX parcel coalescing event"));
-            policy_handle = apex::register_policy(custom_coalescing_event, policy);
-            //
+            policy_handle = apex::register_policy(custom_coalescing_event, count_based_policy);
 
             if (policy_handle == nullptr)
             {
@@ -163,6 +172,12 @@ namespace hpx { namespace util
             }
             else std::cout<<" Done registering policy.\n";
         }
+
+        static apex_event_type return_apex_parcel_coalescing_event()
+        {
+             return apex_parcel_coalescing_event(custom_coalescing_event);
+        }
+
 
         static void initialize()
         {

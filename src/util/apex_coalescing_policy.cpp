@@ -12,6 +12,7 @@ namespace hpx { namespace util
 #if defined(HPX_HAVE_APEX)
 
     apex_parcel_coalescing_policy* apex_parcel_coalescing_policy::instance = nullptr;
+    apex_event_type apex_parcel_coalescing_policy::custom_coalescing_event;
 
 #endif
 }}
