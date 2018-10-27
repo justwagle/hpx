@@ -166,6 +166,9 @@ namespace hpx { namespace util
             custom_coalescing_event = apex_parcel_coalescing_event(apex::register_custom_event("APEX parcel coalescing event"));
             policy_handle = apex::register_policy(custom_coalescing_event, count_based_policy);
 
+	    // To call the custome event include this header file and use this following commented line
+	    //apex::custom_event(hpx::util::apex_parcel_coalescing_policy::return_apex_parcel_coalescing_event(), NULL);
+
             if (policy_handle == nullptr)
             {
                 std::cerr << "Error registering policy!" << std::endl;
