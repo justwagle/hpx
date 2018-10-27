@@ -26,6 +26,8 @@
 namespace hpx { namespace util
 {
 #if defined(HPX_HAVE_APEX) && defined(HPX_HAVE_PARCEL_COALESCING)
+    apex_event_type custom_coalescing_event;
+
     struct apex_parcel_coalescing_policy
     {
         apex_policy_handle* policy_handle;
@@ -38,6 +40,8 @@ namespace hpx { namespace util
         std::string name;
 
         HPX_API_EXPORT static apex_parcel_coalescing_policy* instance;
+
+
         static std::mutex params_mutex;
 
         std::mutex count_mutex;
@@ -104,16 +108,16 @@ namespace hpx { namespace util
             }
         }
 
-        // static apex_event_type apex_parcel_coalescing_event(
-        //     apex_event_type in_type = APEX_INVALID_EVENT)
-        // {
-        //     static apex_event_type event_type;
-        //     if (in_type != APEX_INVALID_EVENT)
-        //     {
-        //         event_type = in_type;
-        //     }
-        //     return event_type;
-        // }
+        static apex_event_type apex_parcel_coalescing_event(
+            apex_event_type in_type = APEX_INVALID_EVENT)
+        {
+            static apex_event_type event_type;
+             if (in_type != APEX_INVALID_EVENT)
+             {
+                 event_type = in_type;
+             }
+             return event_type;
+        }
 
         apex_parcel_coalescing_policy()
           : tuning_window(1)
@@ -145,7 +149,14 @@ namespace hpx { namespace util
             request->set_trigger(apex::register_custom_event(name));
             apex::setup_custom_tuning(*request);
 
-            policy_handle = apex::register_policy(APEX_SEND, policy);
+            //policy_handle = apex::register_policy(APEX_SEND, policy);
+
+            /* register the tuning policy */
+            //policy_handle = apex::register_periodic_policy(500000, policy);
+            custom_coalescing_event = apex_parcel_coalescing_event(apex::register_custom_event("APEX parcel coalescing event"));
+            policy_handle = apex::register_policy(custom_coalescing_event, policy);
+            //
+
             if (policy_handle == nullptr)
             {
                 std::cerr << "Error registering policy!" << std::endl;
