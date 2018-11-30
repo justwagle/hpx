@@ -15,6 +15,10 @@
 # We require at least CMake V3.3.2
 cmake_minimum_required(VERSION 3.3.2 FATAL_ERROR)
 
+if (HPX_WITH_CUDA AND CMAKE_VERSION VERSION_LESS 3.9)
+  message(FATAL_ERROR "CUDA support requires at least CMake 3.9.")
+endif()
+
 # Overrides must go before the project() statement, otherwise they are ignored.
 
 ################################################################################
@@ -42,7 +46,7 @@ endif()
 project(HPX CXX C)
 
 set(HPX_MAJOR_VERSION 1)
-set(HPX_MINOR_VERSION 2)
+set(HPX_MINOR_VERSION 3)
 set(HPX_PATCH_LEVEL   0)
 set(HPX_VERSION "${HPX_MAJOR_VERSION}.${HPX_MINOR_VERSION}.${HPX_PATCH_LEVEL}")
 set(HPX_LIBRARY_VERSION "${HPX_VERSION}")
@@ -90,8 +94,8 @@ if(NOT HPX_CMAKE_LOGLEVEL)
 endif()
 
 # print initial diagnostics
-hpx_info("CMake version: " ${CMAKE_VERSION})
-hpx_info("HPX version: " ${HPX_VERSION})
+hpx_info("CMake version: ${CMAKE_VERSION}")
+hpx_info("HPX version: ${HPX_VERSION}")
 
 ################################################################################
 # Fortran compiler detection
@@ -178,6 +182,21 @@ hpx_option(HPX_WITH_MALLOC
   ${DEFAULT_MALLOC}
   STRINGS "system;tcmalloc;jemalloc;tbbmalloc;custom")
 
+# On some systems jemalloc requires an explicit prefix for the API functions
+# (i.e. 'malloc' is called 'je_malloc', etc.)
+if(${HPX_WITH_MALLOC} STREQUAL "jemalloc")
+  if(MSVC)
+    set(HPX_WITH_JEMALLOC_PREFIX_DEFAULT "je_")
+  else()
+    set(HPX_WITH_JEMALLOC_PREFIX_DEFAULT "<none>")
+  endif()
+  hpx_option(HPX_WITH_JEMALLOC_PREFIX
+    STRING
+    "Optional naming prefix for jemalloc API functions"
+    ${HPX_WITH_JEMALLOC_PREFIX_DEFAULT}
+    ADVANCED)
+endif()
+
 # Logging configuration
 hpx_option(HPX_WITH_LOGGING BOOL
   "Build HPX with logging enabled (default: ON)."
@@ -211,10 +230,6 @@ hpx_option(HPX_WITH_DOCUMENTATION BOOL
   "Build the HPX documentation (default OFF)."
   OFF CATEGORY "Build Targets")
 
-hpx_option(HPX_WITH_DOCUMENTATION_SINGLEPAGE BOOL
-  "The HPX documentation should be built as a single page HTML (default OFF)."
-  OFF CATEGORY "Build Targets")
-
 if(MSVC)
   hpx_option(HPX_WITH_PSEUDO_DEPENDENCIES BOOL
     "Force creating pseudo targets and pseudo dependencies (default OFF)."
@@ -226,8 +241,8 @@ else()
 endif()
 
 hpx_option(HPX_WITH_DYNAMIC_HPX_MAIN BOOL
-  "Enable dynamic overload of system 'main()` (Linux only, default: ON)"
-  ON ADVANCED CATEGORY "Utility")
+  "Enable dynamic overload of system ``main()`` (Linux only, default: ON)"
+  ON ADVANCED)
 if(HPX_WITH_DYNAMIC_HPX_MAIN)
   hpx_add_config_cond_define(HPX_HAVE_DYNAMIC_HPX_MAIN 1)
 endif()
@@ -322,10 +337,12 @@ if(HPX_WITH_CUDA)
     string(APPEND HPX_CUDA_CLANG_FLAGS " --cuda-gpu-arch=${arch}")
   endforeach()
   string(REGEX REPLACE ";" " " HPX_WITH_CUDA_ARCH_INFO "${HPX_WITH_CUDA_ARCH}")
-else()
-  set(HPX_TLL_PUBLIC "PUBLIC")      # keywords for target_link_libraries
-  set(HPX_TLL_PRIVATE "PRIVATE")
+  # keywords for target_link_libraries (cuda)
+  set(CUDA_LINK_LIBRARIES_KEYWORD "PRIVATE")
 endif()
+# keywords for target_link_libraries (hpx)
+set(HPX_TLL_PUBLIC "PUBLIC")
+set(HPX_TLL_PRIVATE "PRIVATE")
 if(HPX_WITH_CUDA_CLANG AND NOT (CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
   hpx_error("To use Cuda Clang, please select Clang as your default C++ compiler")
 endif()
@@ -625,11 +642,12 @@ hpx_option(HPX_WITH_ITTNOTIFY BOOL
 hpx_option(HPX_WITH_HPXMP BOOL
   "Enable hpxMP OpenMP emulation." OFF CATEGORY "OpenMP")
 if(HPX_WITH_HPXMP)
-  if(NOT MSVC AND ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang"))
+  if(NOT MSVC AND (("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+	OR ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")))
     hpx_option(HPX_WITH_HPXMP_NO_UPDATE BOOL
       "Do not update code from remote hpxMP repository." OFF CATEGORY "OpenMP")
   else()
-    hpx_warn("hpxMP can be used only when compiling with clang")
+    hpx_warn("hpxMP can be used only when compiling with clang or gcc")
     set(HPX_WITH_HPXMP OFF)
   endif()
 endif()
@@ -914,30 +932,6 @@ hpx_option(HPX_WITH_VIM_YCM BOOL
 ################################################################################
 # Backwards compatibility options (edit for each release)
 
-# HPX_WITH_LOCAL_DATAFLOW_COMPATIBILITY: introduced in V0.9.99
-hpx_option(HPX_WITH_LOCAL_DATAFLOW_COMPATIBILITY BOOL
-    "Enable backwards compatibility for hpx::lcos::local::dataflow() functions"
-    OFF ADVANCED)
-if(HPX_WITH_LOCAL_DATAFLOW_COMPATIBILITY)
-  hpx_add_config_define(HPX_HAVE_LOCAL_DATAFLOW_COMPATIBILITY)
-endif()
-
-# HPX_WITH_GENERIC_EXECUTION_POLICY: introduced in V0.9.99
-hpx_option(HPX_WITH_GENERIC_EXECUTION_POLICY BOOL
-    "Enable the generic execution policy (default: OFF)"
-    OFF ADVANCED)
-if(HPX_WITH_GENERIC_EXECUTION_POLICY)
-  hpx_add_config_define(HPX_HAVE_GENERIC_EXECUTION_POLICY)
-endif()
-
-# HPX_WITH_ASYNC_FUNCTION_COMPATIBILITY: introduced in V1.0.0
-hpx_option(HPX_WITH_ASYNC_FUNCTION_COMPATIBILITY BOOL
-    "Enable old style ..._sync/..._async functions in API (default: OFF)"
-    OFF ADVANCED)
-if(HPX_WITH_ASYNC_FUNCTION_COMPATIBILITY)
-  hpx_add_config_define(HPX_HAVE_ASYNC_FUNCTION_COMPATIBILITY)
-endif()
-
 # HPX_WITH_QUEUE_COMPATIBILITY: introduced in V1.1.0
 hpx_option(HPX_WITH_QUEUE_COMPATIBILITY BOOL
     "Enable old style queue components in API (default: OFF)"
@@ -967,38 +961,6 @@ hpx_option(HPX_WITH_TUPLE_RVALUE_SWAP BOOL
   ON CATEGORY "Utility" ADVANCED)
 if(HPX_WITH_TUPLE_RVALUE_SWAP)
   hpx_add_config_define(HPX_HAVE_TUPLE_RVALUE_SWAP)
-endif()
-
-# HPX_WITH_BOOST_CHRONO_COMPATIBILITY: introduced in V1.0.0
-hpx_option(HPX_WITH_BOOST_CHRONO_COMPATIBILITY BOOL
-    "Enable support for boost::chrono (default: OFF)"
-    OFF ADVANCED)
-if(HPX_WITH_BOOST_CHRONO_COMPATIBILITY)
-  hpx_add_config_define(HPX_HAVE_BOOST_CHRONO_COMPATIBILITY)
-endif()
-
-# HPX_WITH_EXECUTOR_COMPATIBILITY: introduced in V1.0.0
-hpx_option(HPX_WITH_EXECUTOR_COMPATIBILITY BOOL
-    "Enable old (pre-concurrency TS) executor API (default: OFF)"
-    OFF ADVANCED)
-if(HPX_WITH_EXECUTOR_COMPATIBILITY)
-  hpx_add_config_define(HPX_HAVE_EXECUTOR_COMPATIBILITY)
-endif()
-
-# HPX_WITH_EXECUTION_POLICY_COMPATIBILITY: introduced in V1.0.0
-hpx_option(HPX_WITH_EXECUTION_POLICY_COMPATIBILITY BOOL
-    "Enable old execution policy names in API (default: OFF)"
-    OFF ADVANCED)
-if(HPX_WITH_EXECUTION_POLICY_COMPATIBILITY)
-  hpx_add_config_define(HPX_HAVE_EXECUTION_POLICY_COMPATIBILITY)
-endif()
-
-# HPX_WITH_TRANSFORM_REDUCE_COMPATIBILITY: introduced in V1.0.0
-hpx_option(HPX_WITH_TRANSFORM_REDUCE_COMPATIBILITY BOOL
-    "Enable old overloads for transform_reduce and inner_product (default: OFF)"
-    OFF ADVANCED)
-if(HPX_WITH_TRANSFORM_REDUCE_COMPATIBILITY)
-  hpx_add_config_define(HPX_HAVE_TRANSFORM_REDUCE_COMPATIBILITY)
 endif()
 
 # HPX_WITH_INCLUSIVE_SCAN_COMPATIBILITY: introduced in V1.1.0
@@ -1083,11 +1045,11 @@ if((MSVC14 AND CMAKE_CL_64) OR ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang"))
     endif()
 
     if(MSVC14 AND CMAKE_CL_64)
-      hpx_add_target_compile_option(-await)
+      hpx_add_target_compile_option(-await PUBLIC)
     endif()
 
     if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-      hpx_add_target_compile_option(-Xclang -fcoroutines-ts)
+      hpx_add_target_compile_option(-Xclang -fcoroutines-ts PUBLIC)
     endif()
   endif()
 endif()
@@ -1100,11 +1062,11 @@ endif()
 # optimization flags is not handled here and is left to the responsibility of
 # the user to avoid conflicts in the resulting binaries
 
-hpx_add_target_compile_definition(_DEBUG CONFIGURATIONS Debug)
-hpx_add_target_compile_definition(DEBUG CONFIGURATIONS Debug)
-hpx_add_target_compile_definition(HPX_DISABLE_ASSERTS
+hpx_add_target_compile_definition(_DEBUG PUBLIC CONFIGURATIONS Debug)
+hpx_add_target_compile_definition(DEBUG PUBLIC CONFIGURATIONS Debug)
+hpx_add_target_compile_definition(HPX_DISABLE_ASSERTS PUBLIC
   CONFIGURATIONS Release RelWithDebInfo MinSizeRelease)
-hpx_add_target_compile_definition(BOOST_DISABLE_ASSERTS
+hpx_add_target_compile_definition(BOOST_DISABLE_ASSERTS PUBLIC
   CONFIGURATIONS Release RelWithDebInfo MinSizeRelease)
 
 # Make sure we compile in proper C++xx mode (MSVC uses it automatically)
@@ -1147,8 +1109,8 @@ if(HPX_WITH_CUDA)
     set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-lcudadevrt)
     set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-rdc=true)
   else()
-    hpx_add_target_compile_option(-DBOOST_THREAD_USES_MOVE)
-    hpx_add_target_compile_option(--cuda-path=${CUDA_TOOLKIT_ROOT_DIR})
+    hpx_add_target_compile_option(-DBOOST_THREAD_USES_MOVE PUBLIC)
+    hpx_add_target_compile_option(--cuda-path=${CUDA_TOOLKIT_ROOT_DIR} PUBLIC)
     hpx_libraries(cudart)
     hpx_library_dir(${CUDA_TOOLKIT_ROOT_DIR}/lib64)
     link_directories(${CUDA_TOOLKIT_ROOT_DIR}/lib64)
@@ -1261,31 +1223,31 @@ if(WIN32)
   if(MSVC)
     enable_language(ASM_MASM)
 
-    hpx_add_target_compile_option(-Ox CONFIGURATIONS Release)
+    hpx_add_target_compile_option(-Ox PUBLIC CONFIGURATIONS Release)
 
     # even VS2017 has an ICE when compiling with -Ob2
-    hpx_add_target_compile_option(-Ob1 CONFIGURATIONS Release)
+    hpx_add_target_compile_option(-Ob1 PUBLIC CONFIGURATIONS Release)
 
     if(NOT HPX_WITH_AWAIT)
       # /RTC1 is incompatible with /await
-      hpx_add_target_compile_option(/RTC1 CONFIGURATIONS Debug)
+      hpx_add_target_compile_option(/RTC1 PUBLIC CONFIGURATIONS Debug)
     else()
-      hpx_remove_target_compile_option(/RTC1 CONFIGURATIONS Debug)
+      hpx_remove_target_compile_option(/RTC1 PUBLIC CONFIGURATIONS Debug)
     endif()
 
     # VS2012 and above has a special flag for improving the debug experience by
     # adding more symbol information to the build (-d2Zi)
-    hpx_add_target_compile_option(-d2Zi+ CONFIGURATIONS RelWithDebInfo)
+    hpx_add_target_compile_option(-d2Zi+ PUBLIC CONFIGURATIONS RelWithDebInfo)
 
     # VS2013 and above know how to do link time constant data segment folding
     # VS2013 update 2 and above know how to remove debug information for
     #     non-referenced functions and data (-Zc:inline)
-    hpx_add_target_compile_option(-Zc:inline)
-    hpx_add_target_compile_option(-Gw
+    hpx_add_target_compile_option(-Zc:inline PUBLIC)
+    hpx_add_target_compile_option(-Gw PUBLIC
       CONFIGURATIONS Release RelWithDebInfo MinSizeRelease)
-    hpx_add_target_compile_option(-Zo CONFIGURATIONS RelWithDebInfo)
+    hpx_add_target_compile_option(-Zo PUBLIC CONFIGURATIONS RelWithDebInfo)
     if(HPX_WITH_DATAPAR_VC)
-      hpx_add_target_compile_option(-std:c++latest)
+      hpx_add_target_compile_option(-std:c++latest PUBLIC)
       hpx_add_config_cond_define(_HAS_AUTO_PTR_ETC 1)
     endif()
 
@@ -1293,7 +1255,7 @@ if(WIN32)
     hpx_add_target_compile_option(-EHsc)
     if(MSVC14)
       # assume conforming (throwing) operator new implementations
-      hpx_add_target_compile_option(-Zc:throwingNew)
+      hpx_add_target_compile_option(-Zc:throwingNew PUBLIC)
 
       # enable faster linking (requires VS2015 Update1)
       # disabled for now as this flag crashes debugger
@@ -1306,16 +1268,20 @@ if(WIN32)
 
       # Update 3 allows to flag rvalue misuses and enforces strict string const-
       # qualification conformance
-      hpx_add_target_compile_option(-Zc:rvalueCast)
-      hpx_add_target_compile_option(-Zc:strictStrings)
+      hpx_add_target_compile_option(-Zc:rvalueCast PUBLIC)
+      hpx_add_target_compile_option(-Zc:strictStrings PUBLIC)
+
+      # Update 8 requires to set _ENABLE_EXTENDED_ALIGNED_STORAGE for it to
+      # compile atomics
+      hpx_add_config_cond_define(_ENABLE_EXTENDED_ALIGNED_STORAGE)
     endif()
 
     # Runtime type information
-    hpx_add_target_compile_option(-GR)
+    hpx_add_target_compile_option(-GR PUBLIC)
     # Multiprocessor build
-    hpx_add_target_compile_option(-MP)
+    hpx_add_target_compile_option(-MP PUBLIC)
     # Increase the maximum size of object file sections
-    hpx_add_target_compile_option(-bigobj)
+    hpx_add_target_compile_option(-bigobj PUBLIC)
   endif()
 
   hpx_libraries(psapi shlwapi)
@@ -1537,6 +1503,13 @@ include(HPX_SetupAllocator)
 
 # convey selected allocator type to the build configuration
 hpx_add_config_define(HPX_HAVE_MALLOC "\"${HPX_WITH_MALLOC}\"")
+if(${HPX_WITH_MALLOC} STREQUAL "jemalloc")
+  if(NOT ("${HPX_WITH_JEMALLOC_PREFIX}" STREQUAL "<none>") AND
+     NOT ("${HPX_WITH_JEMALLOC_PREFIX}x" STREQUAL "x"))
+    hpx_add_config_define(HPX_HAVE_JEMALLOC_PREFIX ${HPX_WITH_JEMALLOC_PREFIX})
+    hpx_add_config_define(HPX_HAVE_INTERNAL_ALLOCATOR)
+  endif()
+endif()
 
 find_package(Hwloc)
 if(NOT HWLOC_FOUND)
@@ -1599,7 +1572,7 @@ if(HPX_WITH_APEX)
 
   include_directories(${APEX_SOURCE_DIR})
   set(HPX_ADDITIONAL_PRIVATE_RUNTIME_DEPENDENCIES
-      ${HPX_ADDITIONAL_PRIVATE_RUNTIME_DEPENDENCIES} apex_lib)
+      ${HPX_ADDITIONAL_PRIVATE_RUNTIME_DEPENDENCIES} apex)
   if(APEX_WITH_MSR)
     set(HPX_ADDITIONAL_PRIVATE_RUNTIME_DEPENDENCIES
         ${HPX_ADDITIONAL_PRIVATE_RUNTIME_DEPENDENCIES} -L${MSR_ROOT}/lib -lmsr)
@@ -1622,7 +1595,7 @@ if(HPX_WITH_APEX)
     include_directories(${ITTNOTIFY_SOURCE_DIR})
     hpx_add_config_define(HPX_HAVE_ITTNOTIFY 1)
     set(HPX_ADDITIONAL_PRIVATE_RUNTIME_DEPENDENCIES
-        ${HPX_ADDITIONAL_PRIVATE_RUNTIME_DEPENDENCIES} ittnotify_lib)
+        ${HPX_ADDITIONAL_PRIVATE_RUNTIME_DEPENDENCIES} ittnotify)
   endif()
 endif()
 
@@ -1636,12 +1609,17 @@ if(HPX_WITH_HPXMP)
   if(HPX_WITH_HPXMP_NO_UPDATE)
     set(_hpxmp_no_update NO_UPDATE)
   endif()
+  set(_hpx_hpxmp_tag "v0.1.0")
+  if(HPX_WITH_HPXMP_TAG)
+    message("Overriding hpxMP git tag ${_hpx_hpxmp_tag} with ${HPX_WITH_HPXMP_TAG}")
+    set(_hpx_hpxmp_tag ${HPX_WITH_HPXMP_TAG})
+  endif()
 
   # handle hpxMP library
   include(GitExternal)
   git_external(hpxmp
     https://github.com/STEllAR-GROUP/hpxMP.git
-    master
+    ${_hpx_hpxmp_tag}
     ${_hpxmp_no_update}
     VERBOSE)
 
@@ -1745,14 +1723,14 @@ hpx_include(SetOutputPaths)
 ################################################################################
 # Provide a macro for generating config headers
 ################################################################################
-macro(generate_config_defines_header TARGET_DIRECTORY)
+function(generate_config_defines_header TARGET_DIRECTORY)
   # Generate a defines.hpp to be used in the build directory ...
   set(HPX_DEFINES_PREFIX ${HPX_BUILD_PREFIX})
   write_config_defines_file(
     TEMPLATE "${PROJECT_SOURCE_DIR}/cmake/templates/config_defines.hpp.in"
     NAMESPACE default
     FILENAME "${TARGET_DIRECTORY}/hpx/config/defines.hpp")
-endmacro()
+endfunction()
 
 ################################################################################
 # Set basic search paths for the generated HPX headers
@@ -1777,7 +1755,7 @@ if(HPX_WITH_COMPRESSION_ZLIB)
 endif()
 
 ################################################################################
-# Documentation toolchain (DocBook, BoostBook, QuickBook, xsltproc)
+# Documentation toolchain (Sphinx, Doxygen, Breathe)
 ################################################################################
 hpx_include(Documentation)
 
@@ -1886,39 +1864,6 @@ install(
   PATTERN "CMakeFiles" EXCLUDE
   PATTERN "CTestFiles" EXCLUDE)
 
-install( # install all hpx header files
-  DIRECTORY hpx
-  DESTINATION share/hpx-${HPX_VERSION}/docs/html/code
-  COMPONENT core
-  FILES_MATCHING PATTERN "*.hpp"
-  PATTERN ".git" EXCLUDE
-  PATTERN "CMakeFiles" EXCLUDE
-  PATTERN "CTestFiles" EXCLUDE)
-
-install( # install all hpx source files
-  DIRECTORY src
-  DESTINATION share/hpx-${HPX_VERSION}/docs/html/code
-  COMPONENT core
-  PATTERN ".git" EXCLUDE
-  PATTERN "CMakeFiles" EXCLUDE
-  PATTERN "CTestFiles" EXCLUDE)
-
-install( # install all hpx examples source files
-  DIRECTORY examples
-  DESTINATION share/hpx-${HPX_VERSION}/docs/html/code
-  COMPONENT core
-  PATTERN ".git" EXCLUDE
-  PATTERN "CMakeFiles" EXCLUDE
-  PATTERN "CTestFiles" EXCLUDE)
-
-install( # install all hpx tests source files
-  DIRECTORY tests
-  DESTINATION share/hpx-${HPX_VERSION}/docs/html/code
-  COMPONENT core
-  PATTERN ".git" EXCLUDE
-  PATTERN "CMakeFiles" EXCLUDE
-  PATTERN "CTestFiles" EXCLUDE)
-
 install( # Install all HPX cmake utility files
   DIRECTORY cmake/
   DESTINATION ${LIB}/cmake/${HPX_PACKAGE_NAME}
@@ -1984,40 +1929,20 @@ endif()
 
 install(
   FILES "${PROJECT_SOURCE_DIR}/LICENSE_1_0.txt"
-  DESTINATION share/hpx-${HPX_VERSION}
+  DESTINATION share/hpx
   COMPONENT license)
 
 if(HPX_WITH_DOCUMENTATION)
   # Install HPX documentation files
   install(
-    DIRECTORY "${CMAKE_BINARY_DIR}/share/hpx-${HPX_VERSION}/docs/"
-    DESTINATION share/hpx-${HPX_VERSION}/docs
-    COMPONENT docs
-    OPTIONAL
-    FILES_MATCHING PATTERN "*.html"
-    PATTERN "*.pdf"
-    PATTERN ".git" EXCLUDE
-    PATTERN "*code*" EXCLUDE
-    PATTERN "*src*" EXCLUDE
-    PATTERN "*images*" EXCLUDE)
-
-  install(
     FILES "${PROJECT_SOURCE_DIR}/docs/index.html"
-    DESTINATION share/hpx-${HPX_VERSION}/
+    DESTINATION share/hpx/
     COMPONENT docs)
 
   install(
-    DIRECTORY "${PROJECT_SOURCE_DIR}/docs/html/src/"
-    DESTINATION share/hpx-${HPX_VERSION}/docs/html/src
+    DIRECTORY "${CMAKE_BINARY_DIR}/share/hpx/docs/html/"
+    DESTINATION share/hpx/docs/html
     COMPONENT docs
-    FILES_MATCHING PATTERN "*.css"
-    PATTERN ".git" EXCLUDE)
-
-  install(
-    DIRECTORY "${PROJECT_SOURCE_DIR}/docs/html/images/"
-    DESTINATION share/hpx-${HPX_VERSION}/docs/html/images
-    COMPONENT docs
-    FILES_MATCHING PATTERN "*.png"
     PATTERN ".git" EXCLUDE)
 endif()
 
@@ -2044,10 +1969,6 @@ include(HPX_PrintSummary)
 ################################################################################
 
 include(HPX_GeneratePackage)
-
-# Create a symlink in share pointing to the latest HPX installation
-create_symbolic_link("${CMAKE_BINARY_DIR}/share/hpx-${HPX_VERSION}"
-                     "${CMAKE_BINARY_DIR}/share/hpx")
 
 message("")
 message("HPX will be installed to ${CMAKE_INSTALL_PREFIX}")
