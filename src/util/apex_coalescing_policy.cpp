@@ -13,7 +13,8 @@ namespace hpx { namespace util
 
     apex_parcel_coalescing_policy* apex_parcel_coalescing_policy::instance = nullptr;
     apex_event_type apex_parcel_coalescing_policy::custom_coalescing_event;
-
+    apex_tuning_session_handle apex_parcel_coalescing_policy::tuning_session_handle;
+    apex_policy_handle* apex_parcel_coalescing_policy::policy_handle = nullptr;
 #endif
 }}
 
