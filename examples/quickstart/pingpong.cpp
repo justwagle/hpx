@@ -1,162 +1,159 @@
-//  Copyright (c) 2012 Mehmet Balman
-//  Copyright (c) 2012 Hartmut Kaiser
+//  Copyright (c) 2017 Bibek Wagle
 //
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
 //  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
 #include <hpx/hpx_init.hpp>
-#include <hpx/include/lcos.hpp>
-#include <hpx/include/actions.hpp>
-#include <hpx/include/components.hpp>
+#include <hpx/hpx.hpp>
 #include <hpx/include/iostreams.hpp>
+#include <hpx/include/async.hpp>
 #include <hpx/include/serialization.hpp>
+#include <hpx/runtime/config_entry.hpp>
+#include <hpx/util/apex_coalescing_policy_basic.hpp>
 
+#include <chrono>
 #include <cstddef>
-#include <iostream>
-#include <memory>
-#include <utility>
+#include <complex>
+#include <string>
 #include <vector>
+#include <hpx/plugins/parcel/coalescing_message_handler.hpp>
 
-///////////////////////////////////////////////////////////////////////////////
-const std::size_t vsize_default = 1024*1024;
-const std::size_t numiter_default = 5;
+double duration;
 
-///////////////////////////////////////////////////////////////////////////////
-void on_recv(hpx::naming::id_type to, std::vector<double> const & in,
-    std::size_t counter);
-HPX_PLAIN_ACTION(on_recv, on_recv_action);
-
-void on_recv(hpx::naming::id_type to, std::vector<double> const & in,
-    std::size_t counter)
+namespace pingpong
 {
-    // received vector in
-    if (--counter == 0) return;
-
-
-    // send it to remote locality (to), and wait until it is received
-    std::vector<double> data(in);
-
-    on_recv_action act;
-    act(to, hpx::find_here(), std::move(data), counter);
+    namespace server
+    {
+        std::complex<double> get_element()
+        {
+            return std::complex<double>(13.3,-23.8);
+        }
+    }
 }
 
-///////////////////////////////////////////////////////////////////////////////
-void on_recv_ind(hpx::naming::id_type to,
-    std::shared_ptr<std::vector<double> > const& in, std::size_t counter);
-HPX_PLAIN_ACTION(on_recv_ind, on_recv_ind_action);
+HPX_PLAIN_ACTION(pingpong::server::get_element, pingpong_get_element_action);
+HPX_ACTION_USES_MESSAGE_COALESCING(pingpong_get_element_action);
 
-void on_recv_ind(hpx::naming::id_type to,
-    std::shared_ptr<std::vector<double> > const& in, std::size_t counter)
+
+int hpx_main(boost::program_options::variables_map& vm)
 {
-    // received vector in
-    if (--counter == 0) return;
+    //Exit if not run on two localities
+    if(hpx::get_num_localities().get() != 2)
+    {
+        std::cout<<"ERROR 42: !!Need to run with exactly 2 localities!!"<<std::endl;
+        return hpx::finalize();
+    }
 
-    // send it to remote locality (to), and wait until it is received
-    std::shared_ptr<std::vector<double> > data(
-        std::make_shared<std::vector<double> >(*in));
+    //Commandline specific code
+    std::size_t const n = vm["nparcels"].as<std::size_t>();
 
-    on_recv_ind_action act;
-    act(to, hpx::find_here(), data, counter);
+    if (0 == hpx::get_locality_id())
+    {
+        hpx::cout << "Running With nparcel = " << n << "\n" << hpx::flush;
+    }
+    
+    hpx::util::apex_parcel_coalescing_policy_basic::initialize(duration);
+ 
+    //Create instance of the actions
+    pingpong_get_element_action act;
+    std::vector<hpx::future<std::complex<double>>> recieved(n);
+    std::vector<hpx::future<std::complex<double>>> vec(n);
+    std::vector<hpx::future<std::complex<double>>> vec2(n);
+    std::vector<hpx::future<std::complex<double>>> recieved2(n);
+
+    //Find the other locality
+
+    std::vector<hpx::naming::id_type> dummy = hpx::find_remote_localities();
+    hpx::naming::id_type other_locality = dummy[0];
+    hpx::evaluate_active_counters(true, "Finished Initialization");
+for(std::size_t j = 0; j < 45; j++) {
+
+    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+    for (std::size_t i = 0; i < n; ++i) {
+        //calling the custom event
+        //apex::custom_event(hpx::util::apex_parcel_coalescing_policy::return_apex_parcel_coalescing_event(), NULL);
+            
+        vec[i] = hpx::async(act, other_locality);
+    }
+
+
+    hpx::wait_all(vec);
+    hpx::evaluate_active_counters(false, "First Done");
+
+    std::chrono::steady_clock::time_point end= std::chrono::steady_clock::now();
+    duration = std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count();
+    std::cout << "First Time difference = " << duration <<std::endl;
+    apex::custom_event(hpx::util::apex_parcel_coalescing_policy_basic::return_apex_parcel_coalescing_event(), NULL);
+
+    printf("first done \n");
+    fflush(stdout);
+
+    begin = std::chrono::steady_clock::now();
+    for (std::size_t i = 0; i < n; ++i) {
+        vec2[i] = hpx::async(act, other_locality);
+    }
+
+
+    hpx::wait_all(vec2);
+    hpx::evaluate_active_counters(false, " Second Done");
+    end= std::chrono::steady_clock::now();
+    duration = std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count();
+    std::cout << "Second Time difference = " << duration <<std::endl;
+    apex::custom_event(hpx::util::apex_parcel_coalescing_policy_basic::return_apex_parcel_coalescing_event(), NULL);
+
+
+    printf("Second done \n");
+    fflush(stdout);
+
+    begin = std::chrono::steady_clock::now();
+    for (std::size_t i = 0; i < n; ++i) {
+        recieved[i] = hpx::async(act, other_locality);
+    }
+
+    hpx::wait_all(recieved);
+    hpx::evaluate_active_counters(false, " Third Done");
+    end= std::chrono::steady_clock::now();
+    duration = std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count();
+    std::cout << "third Time difference = " << duration <<std::endl;
+    apex::custom_event(hpx::util::apex_parcel_coalescing_policy_basic::return_apex_parcel_coalescing_event(), NULL);
+
+
+
+    printf("Third done \n");
+    fflush(stdout);
+
+    begin = std::chrono::steady_clock::now();
+    for (std::size_t i = 0; i < n; ++i) {
+        recieved2[i] = hpx::async(act, other_locality);
+    }
+    hpx::wait_all(recieved2);
+    hpx::evaluate_active_counters(true, "All Done");
+    end= std::chrono::steady_clock::now();
+    duration = std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count();
+    std::cout << "fourth Time difference = " << duration <<std::endl;
+    apex::custom_event(hpx::util::apex_parcel_coalescing_policy_basic::return_apex_parcel_coalescing_event(), NULL);
+
+
 }
+    printf("All done \n"); fflush(stdout);
+    hpx::util::apex_parcel_coalescing_policy_basic::finalize();
 
-///////////////////////////////////////////////////////////////////////////////
-int hpx_main(boost::program_options::variables_map &b_arg)
-{
-    std::size_t const vsize = b_arg["vsize"].as<std::size_t>();
-    std::size_t const numiter = b_arg["numiter"].as<std::size_t>() * 2;
-    bool verbose = b_arg["verbose"].as<bool>();
-
-    std::vector<hpx::naming::id_type> localities = hpx::find_remote_localities();
-
-    hpx::naming::id_type to;
-    if(localities.size() == 0)
-    {
-        to = hpx::find_here();
-    }
-    else
-    {
-        to = localities[0]; // send to first remote locality
-    }
-
-    // test sending messages back and forth using a larger vector as one of
-    // the arguments
-    {
-        std::vector<double> data(vsize, double(3.11));
-
-        hpx::util::high_resolution_timer timer1;
-
-        if (numiter != 0) {
-            on_recv_action act;
-            act(to, hpx::find_here(), data, numiter);
-        }
-
-        double time = timer1.elapsed();
-
-        if (verbose) {
-            std::cout << "[hpx_pingpong]" << std::endl
-                    << "total_time(secs)=" << time << std::endl
-                    << "vsize=" << vsize << " = " << vsize * sizeof(double)
-                    << " Bytes" << std::endl
-                    << "bandwidth(MiB/s)="
-                    << (((vsize * sizeof(double) * numiter) / time) / 1024) / 1024
-                    << std::endl
-                    << "localities=" << localities.size() << std::endl
-                    << "numiter=" << numiter << std::endl;
-        }
-        else {
-            std::cout << "[hpx_pingpong]"
-                    << ":total_time(secs)=" << time
-                    << ":vsize=" << vsize
-                    << ":bandwidth(MiB/s)="
-                    << (((vsize * sizeof(double) * numiter) / time) / 1024) / 1024
-                    << ":localities=" << localities.size()
-                    << ":numiter=" << numiter << std::endl;
-        }
-    }
-
-    // do the same but with a wrapped vector
-    /*
-    {
-        std::shared_ptr<std::vector<double> > data(
-            std::make_shared<std::vector<double> >(vsize, double(3.11)));
-
-        hpx::util::high_resolution_timer timer1;
-
-        if (numiter != 0) {
-            on_recv_ind_action act;
-            act(to, hpx::find_here(), data, numiter);
-        }
-
-        double time = timer1.elapsed();
-
-        std::cout << "[hpx_pingpong]"
-                  << ":total_time(secs)=" << time
-                  << ":vsize=" << vsize
-                  << ":bandwidth(GB/s)=" << (vsize * sizeof(double) * numiter)
-                    / (time * 1024 * 1024)
-                  << ":localities=" << localities.size()
-                  << ":numiter=" << numiter << std::endl;
-    }
-    */
-
-    hpx::finalize();
-    return 0;
+    return hpx::finalize();
 }
 
 int main(int argc, char* argv[])
 {
-    namespace po = boost::program_options;
-    po::options_description description("HPX pingpong example");
+    // Configure application-specific options
+    boost::program_options::options_description cmdline(
+            "Usage: " HPX_APPLICATION_STRING " [options]");
 
-    description.add_options()
-        ( "vsize", po::value<std::size_t>()->default_value(vsize_default),
-          "number of elements (doubles) to send/receive  (integer)")
-        ( "numiter", po::value<std::size_t>()->default_value(numiter_default),
-          "number of ping-pong iterations")
-        ( "verbose", po::value<bool>()->default_value(true),
-         "verbosity of output,if false output is for awk")
-        ;
-
-    return hpx::init(description, argc, argv);
+    cmdline.add_options()
+            ("nparcels,n",
+             boost::program_options::value<std::size_t>()->default_value(1000),
+             "the number of parcels to create");
+    // Initialize and run HPX
+    std::vector<std::string> cfg;
+    cfg.push_back("hpx.run_hpx_main!=1");
+    return hpx::init(cmdline,argc, argv, cfg);
 }
 
