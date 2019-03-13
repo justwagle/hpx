@@ -87,8 +87,8 @@ namespace hpx { namespace util
                 	//apex::reset(instance->counter_name);
             }
             else {
- 		printf("As session is converged, policy is deregistered\n"); fflush(stdout);
- 		apex::deregister_policy(policy_handle);
+ 		//printf("As session is converged, policy is deregistered\n"); fflush(stdout);
+ 		//apex::deregister_policy(policy_handle);
 
 	    }
             return APEX_NOERROR;
@@ -141,8 +141,10 @@ namespace hpx { namespace util
 	    //ss << "/statistics{/threads{locality#" << hpx::get_locality_id();
             //ss << "/total}/time/background-overhead}/rolling_average@1000,5000,1";
             counter_name = std::string(ss.str());
+            name = "basic_policy";
             //policy_handle_sample_counter = apex::sample_runtime_counter(50000, counter_name);
             std::function<double(void)> metric = [=]() -> double {
+		std::cout << "duration : " << *duration_ << std::endl;
                 return *duration_;
             };
             request = new apex_tuning_request(name);

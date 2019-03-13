@@ -18,7 +18,7 @@
 #include <vector>
 #include <hpx/plugins/parcel/coalescing_message_handler.hpp>
 
-double duration;
+double duration = 101;
 
 namespace pingpong
 {
@@ -66,7 +66,8 @@ int hpx_main(boost::program_options::variables_map& vm)
     std::vector<hpx::naming::id_type> dummy = hpx::find_remote_localities();
     hpx::naming::id_type other_locality = dummy[0];
     hpx::evaluate_active_counters(true, "Finished Initialization");
-for(std::size_t j = 0; j < 45; j++) {
+
+for(std::size_t j = 0; j < 35; j++) {
 
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
     for (std::size_t i = 0; i < n; ++i) {
@@ -82,7 +83,7 @@ for(std::size_t j = 0; j < 45; j++) {
 
     std::chrono::steady_clock::time_point end= std::chrono::steady_clock::now();
     duration = std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count();
-    std::cout << "First Time difference = " << duration <<std::endl;
+    //std::cout << "First Time difference = " << duration <<std::endl;
     apex::custom_event(hpx::util::apex_parcel_coalescing_policy_basic::return_apex_parcel_coalescing_event(), NULL);
 
     printf("first done \n");
@@ -96,9 +97,9 @@ for(std::size_t j = 0; j < 45; j++) {
 
     hpx::wait_all(vec2);
     hpx::evaluate_active_counters(false, " Second Done");
-    end= std::chrono::steady_clock::now();
+    end = std::chrono::steady_clock::now();
     duration = std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count();
-    std::cout << "Second Time difference = " << duration <<std::endl;
+    //std::cout << "Second Time difference = " << duration <<std::endl;
     apex::custom_event(hpx::util::apex_parcel_coalescing_policy_basic::return_apex_parcel_coalescing_event(), NULL);
 
 
@@ -114,7 +115,7 @@ for(std::size_t j = 0; j < 45; j++) {
     hpx::evaluate_active_counters(false, " Third Done");
     end= std::chrono::steady_clock::now();
     duration = std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count();
-    std::cout << "third Time difference = " << duration <<std::endl;
+    //std::cout << "third Time difference = " << duration <<std::endl;
     apex::custom_event(hpx::util::apex_parcel_coalescing_policy_basic::return_apex_parcel_coalescing_event(), NULL);
 
 
@@ -130,7 +131,7 @@ for(std::size_t j = 0; j < 45; j++) {
     hpx::evaluate_active_counters(true, "All Done");
     end= std::chrono::steady_clock::now();
     duration = std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count();
-    std::cout << "fourth Time difference = " << duration <<std::endl;
+    //std::cout << "fourth Time difference = " << duration <<std::endl;
     apex::custom_event(hpx::util::apex_parcel_coalescing_policy_basic::return_apex_parcel_coalescing_event(), NULL);
 
 

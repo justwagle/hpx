@@ -203,15 +203,15 @@ namespace hpx { namespace util
         {
             if (instance == nullptr)
             {
-                instance = new apex_parcel_coalescing_policy();
+                //instance = new apex_parcel_coalescing_policy();
             }
         }
         static void finalize()
         {
             if (instance != nullptr)
             {
-                delete instance;
-                instance = nullptr;
+                //delete instance;
+                //instance = nullptr;
             }
         }
     };
