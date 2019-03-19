@@ -102,12 +102,12 @@ namespace hpx { namespace parallel { namespace util { namespace detail
                 policy.executor(), test_function, cores, count);
 
         // we should not consider more chunks than we have elements
-        max_chunks = (std::min)(max_chunks, count);
+//        max_chunks = (std::min)(max_chunks, count);
 
         // we should not make chunks smaller than what's determined by the
         // max chunk size
-        chunk_size = (std::max)(chunk_size,
-            (count + max_chunks - 1) / max_chunks);
+//        chunk_size = (std::max)(chunk_size,
+//            (count + max_chunks - 1) / max_chunks);
 
         if (stride != 1)
         {
