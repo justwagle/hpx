@@ -69,6 +69,7 @@ namespace hpx { namespace parallel { namespace execution
                 if (test_chunk_size != 0)
                 {
                     t = (high_resolution_clock::now() - t) / test_chunk_size;
+                    std::cout<<" calc time :"<<t<<" min time: "<<min_time_<<"\n";
                     if (t != 0 && min_time_ >= t)
                     {
                         // return chunk size which will create the required

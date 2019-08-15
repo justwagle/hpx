@@ -94,12 +94,15 @@ namespace hpx { namespace parallel { namespace util { namespace detail
                     begin, count, test_chunk_size);
 
                 count -= test_chunk_size;
+                // std::cout<<"chunk size :"<<test_chunk_size<<"\n";
                 return test_chunk_size;
             };
 
         std::size_t chunk_size =
             execution::get_chunk_size(policy.parameters(),
                 policy.executor(), test_function, cores, count);
+
+        // std::cout<<"chunk size :"<<chunk_size<<"\n";
 
         // we should not consider more chunks than we have elements
         max_chunks = (std::min)(max_chunks, count);
@@ -254,6 +257,7 @@ namespace hpx { namespace parallel { namespace util { namespace detail
             execution::get_chunk_size(policy.parameters(),
                 policy.executor(), test_function, cores, count);
 
+
         // we should not consider more chunks than we have elements
         max_chunks = (std::min)(max_chunks, count);
 
@@ -267,6 +271,8 @@ namespace hpx { namespace parallel { namespace util { namespace detail
             chunk_size = (std::max)(std::size_t(stride),
                 ((chunk_size + stride) / stride - 1) * stride);
         }
+
+        std::cout<<"chunk size :"<<chunk_size<<"\n";
 
         typedef parallel::util::detail::chunk_size_idx_iterator<FwdIter> iterator;
 
